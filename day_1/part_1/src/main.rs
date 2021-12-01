@@ -1,6 +1,6 @@
-const FILE_PATH: &str = "input.txt";
+const FILE_PATH: &str = "../input.txt";
 
-// Quick and clean version
+// Short Version
 
 fn main() {
     let file_content = std::fs::read_to_string(FILE_PATH).unwrap();
@@ -17,7 +17,7 @@ fn main() {
     println!("Count: {}", res);
 }
 
-// Complete version
+// Complete Version
 
 // use std::fs;
 //
