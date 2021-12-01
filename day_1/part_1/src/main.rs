@@ -4,17 +4,18 @@ const FILE_PATH: &str = "../input.txt";
 
 fn main() {
     let file_content = std::fs::read_to_string(FILE_PATH).unwrap();
-    let mut previous_value = None;
-    let res = file_content
+    let (_, count) = file_content
         .split('\n')
-        .filter_map(|str| {
-            let v: u32 = str.parse().ok()?;
-            let res = previous_value.and_then(|pv| if v > pv { Some(()) } else { None });
-            previous_value = Some(v);
-            res
-        })
-        .count();
-    println!("Count: {}", res);
+        .filter_map(|str| str.parse::<u32>().ok())
+        .fold((None, 0u32), |(prev, count), v| {
+            let count = if v > prev.unwrap_or(v) {
+                count + 1
+            } else {
+                count
+            };
+            (Some(v), count)
+        });
+    println!("Count: {}", count);
 }
 
 // Complete Version
