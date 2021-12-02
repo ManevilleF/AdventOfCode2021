@@ -27,21 +27,20 @@ impl FromStr for MoveDirection {
     }
 }
 
-fn part_1(directions: &[MoveDirection]) {
-    let (mut x, mut y) = (0, 0);
-    for dir in directions {
+fn part_1(directions: impl Iterator<Item = MoveDirection>) {
+    let (x, y) = directions.fold((0, 0), |(mut x, mut y), dir| {
         match dir {
             MoveDirection::Forward(v) => x += v,
             MoveDirection::Down(v) => y += v,
             MoveDirection::Up(v) => y -= v,
         };
-    }
-    println!("Part 1 = Final pos: ({}, {}). Result = {}", x, y, x * y);
+        (x, y)
+    });
+    println!("Part 1. Final pos = ({}, {}), Result = {}", x, y, x * y);
 }
 
-fn part_2(directions: &[MoveDirection]) {
-    let (mut x, mut y, mut aim) = (0, 0, 0);
-    for dir in directions {
+fn part_2(directions: impl Iterator<Item = MoveDirection>) {
+    let (x, y, _aim) = directions.fold((0, 0, 0), |(mut x, mut y, mut aim), dir| {
         match dir {
             MoveDirection::Forward(v) => {
                 x += v;
@@ -50,8 +49,9 @@ fn part_2(directions: &[MoveDirection]) {
             MoveDirection::Down(v) => aim += v,
             MoveDirection::Up(v) => aim -= v,
         };
-    }
-    println!("Part 2 = Final pos: ({}, {}). Result = {}", x, y, x * y);
+        (x, y, aim)
+    });
+    println!("Part 2. Final pos = ({}, {}), Result = {}", x, y, x * y);
 }
 
 fn main() {
@@ -60,6 +60,6 @@ fn main() {
         .split('\n')
         .filter_map(|str| MoveDirection::from_str(str).ok())
         .collect();
-    part_1(&file_content);
-    part_2(&file_content);
+    part_1(file_content.iter().copied());
+    part_2(file_content.into_iter());
 }

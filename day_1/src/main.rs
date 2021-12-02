@@ -1,12 +1,10 @@
 const FILE_PATH: &str = "input.txt";
 
 fn get_increasing_count(values: impl Iterator<Item = u32>) -> u32 {
-    let (_, count) = values.fold((None, 0), |(prev, count), v| {
-        let count = if v > prev.unwrap_or(v) {
-            count + 1
-        } else {
-            count
-        };
+    let (_, count) = values.fold((None, 0), |(prev, mut count), v| {
+        if v > prev.unwrap_or(v) {
+            count += 1;
+        }
         (Some(v), count)
     });
     count
