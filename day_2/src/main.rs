@@ -28,28 +28,19 @@ impl FromStr for MoveDirection {
 }
 
 fn part_1(directions: impl Iterator<Item = MoveDirection>) {
-    let (x, y) = directions.fold((0, 0), |(mut x, mut y), dir| {
-        match dir {
-            MoveDirection::Forward(v) => x += v,
-            MoveDirection::Down(v) => y += v,
-            MoveDirection::Up(v) => y -= v,
-        };
-        (x, y)
+    let (x, y) = directions.fold((0, 0), |(x, y), dir| match dir {
+        MoveDirection::Forward(v) => (x + v, y),
+        MoveDirection::Down(v) => (x, y + v),
+        MoveDirection::Up(v) => (x, y.saturating_sub(v)),
     });
     println!("Part 1. Final pos = ({}, {}), Result = {}", x, y, x * y);
 }
 
 fn part_2(directions: impl Iterator<Item = MoveDirection>) {
-    let (x, y, _aim) = directions.fold((0, 0, 0), |(mut x, mut y, mut aim), dir| {
-        match dir {
-            MoveDirection::Forward(v) => {
-                x += v;
-                y += aim * v;
-            }
-            MoveDirection::Down(v) => aim += v,
-            MoveDirection::Up(v) => aim -= v,
-        };
-        (x, y, aim)
+    let (x, y, _aim) = directions.fold((0, 0, 0), |(x, y, aim), dir| match dir {
+        MoveDirection::Forward(v) => (x + v, y + aim * v, aim),
+        MoveDirection::Down(v) => (x, y, aim + v),
+        MoveDirection::Up(v) => (x, y, aim.saturating_sub(v)),
     });
     println!("Part 2. Final pos = ({}, {}), Result = {}", x, y, x * y);
 }
