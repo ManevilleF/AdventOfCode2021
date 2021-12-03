@@ -1,53 +1,5 @@
 const FILE_PATH: &str = "input.txt";
 
-#[derive(Debug, Clone, Default)]
-struct BitDistribution {
-    count_0: usize,
-    count_1: usize,
-}
-
-impl BitDistribution {
-    pub const fn max_bit(&self) -> Bit {
-        if self.count_1 >= self.count_0 {
-            Bit::Bit1
-        } else {
-            Bit::Bit0
-        }
-    }
-
-    pub fn max_char(&self) -> char {
-        self.max_bit().into()
-    }
-
-    pub const fn min_bit(&self) -> Bit {
-        if self.count_1 < self.count_0 {
-            Bit::Bit1
-        } else {
-            Bit::Bit0
-        }
-    }
-
-    pub fn min_char(&self) -> char {
-        self.min_bit().into()
-    }
-
-    pub fn at(index: usize, bits: &[Vec<Bit>]) -> Self {
-        bits.iter()
-            .filter_map(|arr| arr.get(index))
-            .fold(Self::default(), |mut distrib, bit| {
-                match bit {
-                    Bit::Bit0 => distrib.count_0 += 1,
-                    Bit::Bit1 => distrib.count_1 += 1,
-                }
-                distrib
-            })
-    }
-
-    pub fn get_string(distributions: &[Self], func: impl Fn(&Self) -> char) -> String {
-        distributions.iter().map(func).collect()
-    }
-}
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum Bit {
     Bit0,
@@ -73,14 +25,64 @@ impl From<Bit> for char {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct BitDistribution {
+    count_0: usize,
+    count_1: usize,
+}
+
+impl BitDistribution {
+    pub const fn max_bit(&self) -> Bit {
+        if self.count_1 >= self.count_0 {
+            Bit::Bit1
+        } else {
+            Bit::Bit0
+        }
+    }
+
+    pub const fn min_bit(&self) -> Bit {
+        if self.count_1 < self.count_0 {
+            Bit::Bit1
+        } else {
+            Bit::Bit0
+        }
+    }
+
+    pub fn at(index: usize, bits: &[Vec<Bit>]) -> Self {
+        bits.iter()
+            .filter_map(|arr| arr.get(index))
+            .fold(Self::default(), |mut distrib, bit| {
+                match bit {
+                    Bit::Bit0 => distrib.count_0 += 1,
+                    Bit::Bit1 => distrib.count_1 += 1,
+                }
+                distrib
+            })
+    }
+
+    pub fn bit_vec(distributions: &[Self], func: impl Fn(&Self) -> Bit) -> Vec<Bit> {
+        distributions.iter().map(func).collect()
+    }
+}
+
+fn bit_vec_values(bits: &[Bit]) -> (String, u32) {
+    let str: String = bits.iter().copied().map(char::from).collect();
+    let value = u32::from_str_radix(&str, 2).unwrap();
+    (str, value)
+}
+
 fn day_1(bits: &[Vec<Bit>], expected_len: usize) {
     let distributions: Vec<BitDistribution> = (0..expected_len)
         .map(|i| BitDistribution::at(i, bits))
         .collect();
-    let gamma_str = BitDistribution::get_string(&distributions, BitDistribution::max_char);
-    let gamma = u32::from_str_radix(&gamma_str, 2).unwrap();
-    let epsilon_str = BitDistribution::get_string(&distributions, BitDistribution::min_char);
-    let epsilon = u32::from_str_radix(&epsilon_str, 2).unwrap();
+    let (gamma_str, gamma) = bit_vec_values(&BitDistribution::bit_vec(
+        &distributions,
+        BitDistribution::max_bit,
+    ));
+    let (epsilon_str, epsilon) = bit_vec_values(&BitDistribution::bit_vec(
+        &distributions,
+        BitDistribution::min_bit,
+    ));
     println!(
         "Part1. Gamma str: {} - val = {}, Epsilon str: {} - val = {}. Result = {}",
         gamma_str,
@@ -91,31 +93,42 @@ fn day_1(bits: &[Vec<Bit>], expected_len: usize) {
     );
 }
 
+fn day2_candidate(
+    previous_candidate: &[Vec<Bit>],
+    func: impl Fn(&BitDistribution) -> Bit,
+    index: usize,
+) -> Option<Vec<Vec<Bit>>> {
+    if previous_candidate.len() <= 1 {
+        return None;
+    }
+    let target_bit = func(&BitDistribution::at(index, previous_candidate));
+    let new_candidate: Vec<Vec<Bit>> = previous_candidate
+        .iter()
+        .cloned()
+        .filter(|arr| arr.get(index).map_or(false, |bit| *bit == target_bit))
+        .collect();
+    if new_candidate.is_empty() {
+        None
+    } else {
+        Some(new_candidate)
+    }
+}
+
 fn day_2(bits: &[Vec<Bit>], max_len: usize) {
     let (oxygen, co2) = (0..max_len).fold(
         (bits.to_vec(), bits.to_vec()),
         |(mut oxy_candidates, mut co2_candidate), i| {
-            if oxy_candidates.len() > 1 {
-                let oxy_bit = BitDistribution::at(i, &oxy_candidates).max_bit();
-                oxy_candidates = oxy_candidates
-                    .into_iter()
-                    .filter(|arr| *arr.get(i).unwrap() == oxy_bit)
-                    .collect();
+            if let Some(candidate) = day2_candidate(&oxy_candidates, BitDistribution::max_bit, i) {
+                oxy_candidates = candidate;
             }
-            if co2_candidate.len() > 1 {
-                let co2_bit = BitDistribution::at(i, &co2_candidate).min_bit();
-                co2_candidate = co2_candidate
-                    .into_iter()
-                    .filter(|arr| *arr.get(i).unwrap() == co2_bit)
-                    .collect();
+            if let Some(candidate) = day2_candidate(&co2_candidate, BitDistribution::min_bit, i) {
+                co2_candidate = candidate;
             }
             (oxy_candidates, co2_candidate)
         },
     );
-    let oxygen_str: String = oxygen[0].iter().copied().map(char::from).collect();
-    let oxygen = u32::from_str_radix(&oxygen_str, 2).unwrap();
-    let co2_str: String = co2[0].iter().copied().map(char::from).collect();
-    let co2 = u32::from_str_radix(&co2_str, 2).unwrap();
+    let (oxygen_str, oxygen) = bit_vec_values(oxygen.first().unwrap());
+    let (co2_str, co2) = bit_vec_values(co2.first().unwrap());
     println!(
         "Part2. Oxygen str: {} - val = {}, CO2 str: {} - val = {}. Result = {}",
         oxygen_str,
