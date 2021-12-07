@@ -20,6 +20,10 @@ fn main() {
     );
     println!(
         "Part2. Best cost = {}",
-        find_best_cost(&positions, |pos, p| (0..=(pos - p).abs()).sum::<i32>()).unwrap()
+        find_best_cost(&positions, |pos, p| {
+            let v = (pos - p).abs();
+            (v * (v + 1)) / 2
+        })
+        .unwrap()
     );
 }
