@@ -1,11 +1,13 @@
 const FILE_PATH: &str = "input.txt";
 
-fn find_best_cost(positions: &[i32], func: impl Fn(i32, i32) -> i32) -> Option<i32> {
-    let min_pos = *positions.iter().min()?;
-    let max_pos = *positions.iter().max()?;
-    let costs =
-        (min_pos..max_pos).map(|pos| positions.iter().fold(0, |cost, p| cost + func(pos, *p)));
-    costs.min()
+fn find_best_cost(positions: &[i32], cost_fn: impl Fn(i32) -> i32) -> Option<i32> {
+    (*positions.iter().min()?..*positions.iter().max()?)
+        .map(|pos| {
+            positions
+                .iter()
+                .fold(0, |cost, p| cost + cost_fn((pos - p).abs()))
+        })
+        .min()
 }
 
 fn main() {
@@ -16,14 +18,10 @@ fn main() {
         .collect();
     println!(
         "Part1. Best cost = {}",
-        find_best_cost(&positions, |pos, p| (pos - p).abs()).unwrap()
+        find_best_cost(&positions, |len| len).unwrap()
     );
     println!(
         "Part2. Best cost = {}",
-        find_best_cost(&positions, |pos, p| {
-            let v = (pos - p).abs();
-            (v * (v + 1)) / 2
-        })
-        .unwrap()
+        find_best_cost(&positions, |len| (len * (len + 1)) / 2).unwrap()
     );
 }
