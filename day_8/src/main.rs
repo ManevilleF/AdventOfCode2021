@@ -26,22 +26,16 @@ impl FromStr for Entry {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let split: [String; 2] = s
-            .trim()
-            .split('|')
-            .map(ToString::to_string)
-            .collect::<Vec<String>>()
-            .try_into()
-            .map_err(|e| format!("{} Is not valid: {:?} needs 2 elements", s, e))?;
-        let mut patterns: Vec<String> = split[0]
-            .trim()
-            .split(' ')
+        let (pattern, output) = s
+            .split_once('|')
+            .ok_or_else(|| format!("{} needs 2 elements", s))?;
+        let mut patterns: Vec<String> = pattern
+            .split_ascii_whitespace()
             .map(ToString::to_string)
             .collect();
         patterns.sort_unstable_by_key(String::len);
-        let output_values = split[1]
-            .trim()
-            .split(' ')
+        let output_values: Vec<String> = output
+            .split_ascii_whitespace()
             .map(ToString::to_string)
             .collect();
         Ok(Self {
@@ -118,12 +112,10 @@ impl Entry {
 
     fn outputs_sum_str(&self) -> String {
         let mapper = self.pattern_matcher();
-        let res: Vec<String> = self
-            .output_values
+        self.output_values
             .iter()
             .map(|output_value| Self::match_output(output_value, &mapper).to_string())
-            .collect();
-        res.join("")
+            .collect()
     }
 }
 
@@ -150,7 +142,7 @@ fn part2(entries: &[Entry]) -> usize {
 fn main() {
     let entries: Vec<Entry> = std::fs::read_to_string(FILE_PATH)
         .unwrap()
-        .split('\n')
+        .lines()
         .map(|s| Entry::from_str(s).unwrap())
         .collect();
     println!("Part1: {} outputs use 1, 4, 7, or 8 digit", part1(&entries));
