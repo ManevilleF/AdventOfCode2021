@@ -120,16 +120,16 @@ impl Entry {
 }
 
 fn part1(entries: &[Entry]) -> usize {
-    entries.iter().fold(0, |count, entry| {
-        entry
-            .output_values
-            .iter()
-            .fold(0, |c, digit| match digit.len() {
-                2 | 3 | 4 | 7 => c + 1,
-                _ => c,
-            })
-            + count
-    })
+    entries
+        .iter()
+        .map(|entry| {
+            entry
+                .output_values
+                .iter()
+                .filter(|digit| [2, 3, 4, 7].contains(&digit.len()))
+                .count()
+        })
+        .sum()
 }
 
 fn part2(entries: &[Entry]) -> usize {
