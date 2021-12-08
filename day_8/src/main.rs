@@ -57,7 +57,7 @@ impl FromStr for Entry {
 impl Entry {
     fn pattern_matching(&self) -> HashMap<char, Vec<char>> {
         let mut patterns = self.patterns.clone();
-        patterns.sort_by_key(|p| p.len());
+        patterns.sort_by_key(String::len);
         let mut done_values: Vec<char> = vec![];
         patterns
             .iter()
@@ -66,7 +66,7 @@ impl Entry {
                 for matched in REGULAR_PATTERNS.iter().filter(|p| p.len() == pattern.len()) {
                     let from = pattern.chars();
                     let to = matched.chars().collect::<Vec<char>>();
-                    for from_char in from.into_iter() {
+                    for from_char in from {
                         let entry = map.entry(from_char).or_insert_with(|| {
                             to.iter()
                                 .copied()
@@ -76,7 +76,7 @@ impl Entry {
                         *entry = entry.iter().filter(|c| to.contains(c)).copied().collect();
                     }
                 }
-                for (_k, v) in map.iter() {
+                for v in map.values() {
                     done_values.extend(v.clone());
                     done_values.sort_unstable();
                     done_values.dedup();
@@ -92,7 +92,7 @@ impl Entry {
                 .map(|options| {
                     options
                         .iter()
-                        .map(|option| {
+                        .flat_map(|option| {
                             if acc.is_empty() {
                                 vec![option.to_string()]
                             } else {
@@ -101,7 +101,6 @@ impl Entry {
                                     .collect::<Vec<String>>()
                             }
                         })
-                        .flatten()
                         .collect()
                 })
                 .unwrap_or(acc)
