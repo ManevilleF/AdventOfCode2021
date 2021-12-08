@@ -52,29 +52,33 @@ impl FromStr for Entry {
 }
 
 impl Entry {
-    fn pattern_matching(&self) -> HashMap<char, Vec<char>> {
+    fn pattern_matcher(&self) -> HashMap<char, Vec<char>> {
         let mut done_values: Vec<char> = vec![];
         self.patterns
             .iter()
             .filter(|p| [2, 3, 4, 7].contains(&p.len()))
             .fold(HashMap::new(), |mut map, pattern| {
-                for matched in REGULAR_PATTERNS.iter().filter(|p| p.len() == pattern.len()) {
-                    let to = matched.chars().collect::<Vec<char>>();
-                    for from_char in pattern.chars() {
-                        let entry = map.entry(from_char).or_insert_with(|| {
-                            to.iter()
-                                .copied()
-                                .filter(|c| !done_values.contains(c))
-                                .collect()
-                        });
-                        *entry = entry.iter().filter(|c| to.contains(c)).copied().collect();
-                    }
-                }
-                for v in map.values() {
-                    done_values.extend(v.clone());
-                    done_values.sort_unstable();
-                    done_values.dedup();
-                }
+                let new_values = REGULAR_PATTERNS
+                    .iter()
+                    .filter(|p| p.len() == pattern.len())
+                    .fold(vec![], |mut vec, matched| {
+                        let to = matched.chars().collect::<Vec<char>>();
+                        for from_char in pattern.chars() {
+                            let entry = map.entry(from_char).or_insert_with(|| {
+                                to.iter()
+                                    .copied()
+                                    .filter(|c| !done_values.contains(c))
+                                    .map(|c| {
+                                        vec.push(c);
+                                        c
+                                    })
+                                    .collect()
+                            });
+                            *entry = entry.iter().filter(|c| to.contains(c)).copied().collect();
+                        }
+                        vec
+                    });
+                done_values.extend(new_values);
                 map
             })
     }
@@ -103,22 +107,17 @@ impl Entry {
 
     fn match_output(output: &str, mapper: &HashMap<char, Vec<char>>) -> usize {
         let possible_matches = Self::possible_matches(output, mapper);
-        let matches = possible_matches.iter().fold(vec![], |mut res, candidate| {
+        for candidate in &possible_matches {
             let str: String = candidate.chars().sorted().collect();
             if let Some(pos) = REGULAR_PATTERNS.iter().position(|s| s == &str.as_str()) {
-                res.push(pos);
-                res.dedup();
+                return pos;
             }
-            res
-        });
-        matches
-            .first()
-            .copied()
-            .unwrap_or_else(|| panic!("No matches for {}", output))
+        }
+        panic!("No matches for {}", output)
     }
 
     fn outputs_sum_str(&self) -> String {
-        let mapper = self.pattern_matching();
+        let mapper = self.pattern_matcher();
         let res: Vec<String> = self
             .output_values
             .iter()
