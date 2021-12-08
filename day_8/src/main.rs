@@ -1,8 +1,8 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::str::FromStr;
 
 const FILE_PATH: &str = "input.txt";
-
 const REGULAR_PATTERNS: &[&str; 10] = &[
     "abcefg",  // 0
     "cf",      // 1
@@ -18,8 +18,8 @@ const REGULAR_PATTERNS: &[&str; 10] = &[
 
 #[derive(Debug, Clone)]
 struct Entry {
-    patterns: [String; 10],
-    output_values: [String; 4],
+    patterns: Vec<String>,
+    output_values: Vec<String>,
 }
 
 impl FromStr for Entry {
@@ -33,20 +33,17 @@ impl FromStr for Entry {
             .collect::<Vec<String>>()
             .try_into()
             .map_err(|e| format!("{} Is not valid: {:?} needs 2 elements", s, e))?;
-        let patterns = split[0]
+        let mut patterns: Vec<String> = split[0]
             .trim()
             .split(' ')
             .map(ToString::to_string)
-            .collect::<Vec<String>>()
-            .try_into()
-            .map_err(|e| format!("{} Is not valid: {:?} needs 10 elements", s, e))?;
+            .collect();
+        patterns.sort_unstable_by_key(String::len);
         let output_values = split[1]
             .trim()
             .split(' ')
             .map(ToString::to_string)
-            .collect::<Vec<String>>()
-            .try_into()
-            .map_err(|e| format!("{} Is not valid: {:?} needs 4 elements", s, e))?;
+            .collect();
         Ok(Self {
             patterns,
             output_values,
@@ -56,17 +53,14 @@ impl FromStr for Entry {
 
 impl Entry {
     fn pattern_matching(&self) -> HashMap<char, Vec<char>> {
-        let mut patterns = self.patterns.clone();
-        patterns.sort_by_key(String::len);
         let mut done_values: Vec<char> = vec![];
-        patterns
+        self.patterns
             .iter()
             .filter(|p| [2, 3, 4, 7].contains(&p.len()))
-            .fold(HashMap::<char, Vec<char>>::new(), |mut map, pattern| {
+            .fold(HashMap::new(), |mut map, pattern| {
                 for matched in REGULAR_PATTERNS.iter().filter(|p| p.len() == pattern.len()) {
-                    let from = pattern.chars();
                     let to = matched.chars().collect::<Vec<char>>();
-                    for from_char in from {
+                    for from_char in pattern.chars() {
                         let entry = map.entry(from_char).or_insert_with(|| {
                             to.iter()
                                 .copied()
@@ -110,9 +104,7 @@ impl Entry {
     fn match_output(output: &str, mapper: &HashMap<char, Vec<char>>) -> usize {
         let possible_matches = Self::possible_matches(output, mapper);
         let matches = possible_matches.iter().fold(vec![], |mut res, candidate| {
-            let mut chars: Vec<char> = candidate.chars().collect();
-            chars.sort_unstable();
-            let str = String::from_iter(chars);
+            let str: String = candidate.chars().sorted().collect();
             if let Some(pos) = REGULAR_PATTERNS.iter().position(|s| s == &str.as_str()) {
                 res.push(pos);
                 res.dedup();
@@ -142,7 +134,7 @@ fn part1(entries: &[Entry]) -> usize {
             .output_values
             .iter()
             .fold(0, |c, digit| match digit.len() {
-                1 | 2 | 3 | 4 | 7 => c + 1,
+                2 | 3 | 4 | 7 => c + 1,
                 _ => c,
             })
             + count
