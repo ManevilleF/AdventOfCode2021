@@ -1,8 +1,4 @@
 const FILE_PATH: &str = "input.txt";
-const NEIGHBOR_COORDS: &[Coords; 2] = &[
-    (1, 0), // RIGHT
-    (0, 1), // TOP
-];
 
 type Coords = (usize, usize);
 
@@ -24,11 +20,11 @@ impl From<String> for HeightMap {
 }
 
 impl HeightMap {
-    fn get_neighbors_at(&self, (x, y): Coords) -> Vec<(Coords, u8)> {
+    fn neighbors_at(&self, (x, y): Coords) -> Vec<(Coords, u8)> {
         [usize::checked_add, usize::checked_sub]
             .iter()
             .flat_map(|op| {
-                NEIGHBOR_COORDS
+                [(1, 0), (0, 1)]
                     .iter()
                     .filter_map(|(dx, dy)| {
                         let (x, y) = (op(x, *dx)?, op(y, *dy)?);
@@ -48,7 +44,7 @@ impl HeightMap {
                 line.iter()
                     .enumerate()
                     .filter(|(x, digit)| {
-                        self.get_neighbors_at((*x, y))
+                        self.neighbors_at((*x, y))
                             .iter()
                             .all(|(_coords, n)| n > digit)
                     })
@@ -58,19 +54,12 @@ impl HeightMap {
             .collect()
     }
 
-    fn risk_level(&self) -> u32 {
-        self.low_points()
-            .iter()
-            .map(|(_coords, digit)| u32::from(*digit) + 1)
-            .sum()
-    }
-
     fn basin_at(&self, coords: Coords, basin: &mut Vec<Coords>) {
         if basin.contains(&coords) {
             return;
         }
         basin.push(coords);
-        self.get_neighbors_at(coords)
+        self.neighbors_at(coords)
             .into_iter()
             .filter(|(_coords, d)| *d < 9)
             .for_each(|(coords, _d)| self.basin_at(coords, basin));
@@ -92,7 +81,13 @@ impl HeightMap {
 }
 
 fn main() {
-    let height_map = HeightMap::from(std::fs::read_to_string(FILE_PATH).unwrap());
-    println!("Part1: risk level = {}", height_map.risk_level());
-    println!("Part2: basin sizes = {}", height_map.basin_sizes());
+    let map = HeightMap::from(std::fs::read_to_string(FILE_PATH).unwrap());
+    println!(
+        "Part1: risk level = {}",
+        map.low_points()
+            .iter()
+            .map(|(_, digit)| u32::from(*digit) + 1)
+            .sum::<u32>()
+    );
+    println!("Part2: basin sizes = {}", map.basin_sizes());
 }
