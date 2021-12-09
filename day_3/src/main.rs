@@ -1,108 +1,78 @@
 const FILE_PATH: &str = "input.txt";
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-enum Bit {
-    Bit0,
-    Bit1,
-}
-
-impl Bit {
-    pub const fn from_char(c: char) -> Option<Self> {
-        match c {
-            '0' => Some(Self::Bit0),
-            '1' => Some(Self::Bit1),
-            _ => None,
-        }
-    }
-}
-
-impl From<Bit> for char {
-    fn from(b: Bit) -> Self {
-        match b {
-            Bit::Bit0 => '0',
-            Bit::Bit1 => '1',
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default)]
 struct BitDistribution {
-    count_0: usize,
     count_1: usize,
+    count_0: usize,
 }
 
 impl BitDistribution {
-    pub const fn max_bit(&self) -> Bit {
+    pub const fn max_bit(&self) -> char {
         if self.count_1 >= self.count_0 {
-            Bit::Bit1
+            '1'
         } else {
-            Bit::Bit0
+            '0'
         }
     }
 
-    pub const fn min_bit(&self) -> Bit {
+    pub const fn min_bit(&self) -> char {
         if self.count_1 < self.count_0 {
-            Bit::Bit1
+            '1'
         } else {
-            Bit::Bit0
+            '0'
         }
     }
 
-    pub fn at(index: usize, bits: &[Vec<Bit>]) -> Self {
-        bits.iter()
-            .filter_map(|arr| arr.get(index))
-            .fold(Self::default(), |mut distrib, bit| {
-                match bit {
-                    Bit::Bit0 => distrib.count_0 += 1,
-                    Bit::Bit1 => distrib.count_1 += 1,
-                }
-                distrib
-            })
+    pub fn at(index: usize, bits: &[Vec<char>]) -> Self {
+        let len = bits.len();
+        let count_1 = bits
+            .iter()
+            .filter_map(|arr| arr.get(index).copied())
+            .filter(|c| *c == '1')
+            .count();
+        Self {
+            count_1,
+            count_0: len - count_1,
+        }
     }
 
-    pub fn bit_vec(distributions: &[Self], func: impl Fn(&Self) -> Bit) -> Vec<Bit> {
+    pub fn bit_str(distributions: &[Self], func: impl Fn(&Self) -> char) -> String {
         distributions.iter().map(func).collect()
     }
+
+    pub fn bit_vec_value(distributions: &[Self], func: impl Fn(&Self) -> char) -> u32 {
+        let bit_str = Self::bit_str(distributions, func);
+        bit_str_value(&bit_str)
+    }
 }
 
-fn bit_vec_values(bits: &[Bit]) -> (String, u32) {
-    let str: String = bits.iter().copied().map(char::from).collect();
-    let value = u32::from_str_radix(&str, 2).unwrap();
-    (str, value)
+fn bit_str_value(bit_str: &str) -> u32 {
+    u32::from_str_radix(bit_str, 2).unwrap()
 }
 
-fn day_1(bits: &[Vec<Bit>], expected_len: usize) {
+fn day_1(bits: &[Vec<char>], expected_len: usize) {
     let distributions: Vec<BitDistribution> = (0..expected_len)
         .map(|i| BitDistribution::at(i, bits))
         .collect();
-    let (gamma_str, gamma) = bit_vec_values(&BitDistribution::bit_vec(
-        &distributions,
-        BitDistribution::max_bit,
-    ));
-    let (epsilon_str, epsilon) = bit_vec_values(&BitDistribution::bit_vec(
-        &distributions,
-        BitDistribution::min_bit,
-    ));
+    let gamma = BitDistribution::bit_vec_value(&distributions, BitDistribution::max_bit);
+    let epsilon = BitDistribution::bit_vec_value(&distributions, BitDistribution::min_bit);
     println!(
-        "Part1. Gamma str: {} - val = {}, Epsilon str: {} - val = {}. Result = {}",
-        gamma_str,
+        "Part1. Gamma = {}, Epsilon = {}. Result = {}",
         gamma,
-        epsilon_str,
         epsilon,
         gamma * epsilon
     );
 }
 
 fn day2_candidate(
-    previous_candidate: &[Vec<Bit>],
-    func: impl Fn(&BitDistribution) -> Bit,
+    previous_candidate: &[Vec<char>],
+    func: impl Fn(&BitDistribution) -> char,
     index: usize,
-) -> Option<Vec<Vec<Bit>>> {
+) -> Option<Vec<Vec<char>>> {
     if previous_candidate.len() <= 1 {
         return None;
     }
     let target_bit = func(&BitDistribution::at(index, previous_candidate));
-    let new_candidate: Vec<Vec<Bit>> = previous_candidate
+    let new_candidate: Vec<Vec<char>> = previous_candidate
         .iter()
         .cloned()
         .filter(|arr| arr.get(index).map_or(false, |bit| *bit == target_bit))
@@ -114,36 +84,34 @@ fn day2_candidate(
     }
 }
 
-fn day_2(bits: &[Vec<Bit>], max_len: usize) {
+fn day_2(bits: &[Vec<char>], max_len: usize) {
     let (oxygen, co2) = (0..max_len).fold(
         (bits.to_vec(), bits.to_vec()),
-        |(mut oxy_candidates, mut co2_candidate), i| {
+        |(mut oxy_candidates, mut co2_candidates), i| {
             if let Some(candidate) = day2_candidate(&oxy_candidates, BitDistribution::max_bit, i) {
                 oxy_candidates = candidate;
             }
-            if let Some(candidate) = day2_candidate(&co2_candidate, BitDistribution::min_bit, i) {
-                co2_candidate = candidate;
+            if let Some(candidate) = day2_candidate(&co2_candidates, BitDistribution::min_bit, i) {
+                co2_candidates = candidate;
             }
-            (oxy_candidates, co2_candidate)
+            (oxy_candidates, co2_candidates)
         },
     );
-    let (oxygen_str, oxygen) = bit_vec_values(oxygen.first().unwrap());
-    let (co2_str, co2) = bit_vec_values(co2.first().unwrap());
+    let oxygen = bit_str_value(oxygen.first().unwrap().iter().collect::<String>().as_str());
+    let co2 = bit_str_value(co2.first().unwrap().iter().collect::<String>().as_str());
     println!(
-        "Part2. Oxygen str: {} - val = {}, CO2 str: {} - val = {}. Result = {}",
-        oxygen_str,
+        "Part2. Oxygen = {}, CO2 = {}. Result = {}",
         oxygen,
-        co2_str,
         co2,
         oxygen * co2
     );
 }
 
 fn main() {
-    let bits: Vec<Vec<Bit>> = std::fs::read_to_string(FILE_PATH)
+    let bits: Vec<Vec<char>> = std::fs::read_to_string(FILE_PATH)
         .unwrap()
         .split('\n')
-        .map(|str| str.chars().filter_map(Bit::from_char).collect())
+        .map(|str| str.chars().collect())
         .collect();
     let expected_len = bits.first().expect("File is empty").len();
     day_1(&bits, expected_len);
