@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 const FILE_PATH: &str = "input.txt";
 const NEIGHBOR_COORDS: &[Coords; 2] = &[
     (1, 0), // RIGHT
@@ -11,19 +9,17 @@ type Coords = (usize, usize);
 #[derive(Debug, Clone)]
 struct HeightMap(Vec<Vec<u8>>);
 
-impl FromStr for HeightMap {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let map = s
-            .lines()
-            .map(|line| {
-                line.chars()
-                    .filter_map(|c| c.to_digit(10).and_then(|d| d.try_into().ok()))
-                    .collect()
-            })
-            .collect();
-        Ok(Self(map))
+impl From<String> for HeightMap {
+    fn from(s: String) -> Self {
+        Self(
+            s.lines()
+                .map(|line| {
+                    line.chars()
+                        .filter_map(|c| c.to_digit(10).and_then(|d| d.try_into().ok()))
+                        .collect()
+                })
+                .collect(),
+        )
     }
 }
 
@@ -79,13 +75,10 @@ impl HeightMap {
             return;
         }
         basin.push(coords);
-        for (coords, _d) in self
-            .get_neighbors_at(coords)
+        self.get_neighbors_at(coords)
             .into_iter()
             .filter(|(_coords, d)| *d < 9)
-        {
-            self.basin_at(coords, basin);
-        }
+            .for_each(|(coords, _d)| self.basin_at(coords, basin));
     }
 
     fn basin_sizes(&self) -> usize {
@@ -104,7 +97,7 @@ impl HeightMap {
 }
 
 fn main() {
-    let height_map = HeightMap::from_str(&std::fs::read_to_string(FILE_PATH).unwrap()).unwrap();
+    let height_map = HeightMap::from(std::fs::read_to_string(FILE_PATH).unwrap());
     println!("Part1: risk level = {}", height_map.risk_level());
     println!("Part2: basin sizes = {}", height_map.basin_sizes());
 }
