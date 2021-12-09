@@ -31,14 +31,9 @@ impl HeightMap {
                 NEIGHBOR_COORDS
                     .iter()
                     .filter_map(|(dx, dy)| {
-                        if let (Some(y), Some(x)) = (op(y, *dy), op(x, *dx)) {
-                            self.0
-                                .get(y)
-                                .and_then(|l| l.get(x).copied())
-                                .map(|d| ((x, y), d))
-                        } else {
-                            None
-                        }
+                        let (x, y) = (op(x, *dx)?, op(y, *dy)?);
+                        let digit = self.0.get(y)?.get(x)?;
+                        Some(((x, y), *digit))
                     })
                     .collect::<Vec<(Coords, u8)>>()
             })
