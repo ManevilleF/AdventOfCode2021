@@ -19,21 +19,20 @@ impl ChunkChar {
 }
 
 fn handle_line(line: &[char]) -> Result<Vec<char>, char> {
-    let mut expected_chars = vec![];
-    for c in line.iter().copied().map(ChunkChar::new) {
-        match c {
-            ChunkChar::OpeningChar(ec) => expected_chars.push(ec),
-            ChunkChar::ClosingChar(gc) => match expected_chars.pop() {
-                None => return Err(gc),
-                Some(ec) => {
-                    if ec != gc {
+    line.iter()
+        .copied()
+        .map(ChunkChar::new)
+        .try_fold(vec![], |mut expected_chars, c| {
+            match c {
+                ChunkChar::OpeningChar(ec) => expected_chars.push(ec),
+                ChunkChar::ClosingChar(gc) => {
+                    if !expected_chars.pop().map_or(false, |ec| ec == gc) {
                         return Err(gc);
                     }
                 }
-            },
-        }
-    }
-    Ok(expected_chars)
+            }
+            Ok(expected_chars)
+        })
 }
 
 fn main() {
