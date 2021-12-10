@@ -1,6 +1,10 @@
 const FILE_PATH: &str = "input.txt";
 
-fn get_increasing_count(values: &[u32]) -> usize {
+fn get_increasing_count(values: &[u32], window_size: usize) -> usize {
+    let values: Vec<u32> = values
+        .windows(window_size)
+        .map(|w| w.iter().sum())
+        .collect();
     values
         .iter()
         .enumerate()
@@ -16,18 +20,9 @@ fn get_increasing_count(values: &[u32]) -> usize {
 fn main() {
     let file_content: Vec<u32> = std::fs::read_to_string(FILE_PATH)
         .unwrap()
-        .split('\n')
-        .filter_map(|str| str.parse().ok())
+        .lines()
+        .map(|str| str.parse().unwrap())
         .collect();
-
-    println!("Part 1: {}", get_increasing_count(&file_content));
-
-    let triple_sums: Vec<u32> = (0..file_content.len().saturating_sub(2))
-        .map(|i| {
-            (0..=2)
-                .filter_map(|delta| file_content.get(i + delta))
-                .sum::<u32>()
-        })
-        .collect();
-    println!("Part 2: {}", get_increasing_count(&triple_sums));
+    println!("Part 1: {}", get_increasing_count(&file_content, 1));
+    println!("Part 2: {}", get_increasing_count(&file_content, 3));
 }
