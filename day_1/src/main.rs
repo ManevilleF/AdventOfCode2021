@@ -1,19 +1,10 @@
 const FILE_PATH: &str = "input.txt";
 
-fn get_increasing_count(values: &[u32], window_size: usize) -> usize {
-    let values: Vec<u32> = values
-        .windows(window_size)
-        .map(|w| w.iter().sum())
-        .collect();
+fn get_increasing_count(values: &[u32], delta: usize) -> usize {
     values
         .iter()
         .enumerate()
-        .filter(|(i, v)| {
-            v > &i
-                .checked_sub(1)
-                .and_then(|prev| values.get(prev))
-                .unwrap_or(v)
-        })
+        .filter(|(i, v)| *v < values.get(i + delta).unwrap_or(v))
         .count()
 }
 
