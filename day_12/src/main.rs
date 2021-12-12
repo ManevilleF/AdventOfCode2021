@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 const FILE_PATH: &str = "input.txt";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 enum Cave {
     Start,
     End,
@@ -46,29 +46,60 @@ impl FromStr for CaveSystem {
 }
 
 impl CaveSystem {
-    fn path_builder(&self, cave: &Cave, mut path: Vec<Cave>, paths: &mut Vec<Vec<Cave>>) {
+    fn path_builder(
+        &self,
+        cave: &Cave,
+        mut path: Vec<Cave>,
+        paths: &mut Vec<Vec<Cave>>,
+        criteria: impl Fn(&[Cave], &Cave) -> bool + Clone,
+    ) {
         match cave {
             Cave::End => paths.push(path),
-            Cave::Small(_) | Cave::Start if path.contains(cave) => (),
+            Cave::Start if path.contains(cave) => (),
+            Cave::Small(_) if criteria(&path, cave) => (),
             _ => {
                 path.push(cave.clone());
                 if let Some(caves) = self.0.get(cave) {
-                    caves
-                        .iter()
-                        .for_each(|cave| self.path_builder(cave, path.clone(), paths));
+                    for cave in caves.iter() {
+                        self.path_builder(cave, path.clone(), paths, criteria.clone());
+                    }
                 }
             }
         }
     }
 
-    fn path_count(&self) -> usize {
+    fn part_1_exclusion_criteria(path: &[Cave], cave: &Cave) -> bool {
+        path.contains(cave)
+    }
+
+    fn part_2_exclusion_criteria(path: &[Cave], cave: &Cave) -> bool {
+        if !path.contains(cave) {
+            return false;
+        }
+        let small_caves: Vec<Cave> = path
+            .iter()
+            .cloned()
+            .filter(|c| matches!(c, Cave::Small(_)))
+            .collect();
+        let deduped: HashSet<Cave> = small_caves.iter().cloned().collect();
+        small_caves.len() != deduped.len()
+    }
+
+    fn path_count(&self, criteria: impl Fn(&[Cave], &Cave) -> bool + Clone) -> usize {
         let mut paths = vec![];
-        self.path_builder(&Cave::Start, vec![], &mut paths);
+        self.path_builder(&Cave::Start, vec![], &mut paths, criteria);
         paths.len()
     }
 }
 
 fn main() {
     let map = CaveSystem::from_str(&std::fs::read_to_string(FILE_PATH).unwrap()).unwrap();
-    println!("Part1. Path count = {}", map.path_count());
+    println!(
+        "Part1. Path count = {}",
+        map.path_count(CaveSystem::part_1_exclusion_criteria)
+    );
+    println!(
+        "Part2. Path count = {}",
+        map.path_count(CaveSystem::part_2_exclusion_criteria)
+    );
 }
