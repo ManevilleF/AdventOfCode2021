@@ -84,6 +84,12 @@ impl SquidGrid {
             }
         }
     }
+
+    fn is_synced(&self) -> bool {
+        self.energy_levels
+            .iter()
+            .all(|l| l.iter().all(|level| *level == 0))
+    }
 }
 
 fn main() {
@@ -92,4 +98,10 @@ fn main() {
         grid.handle_step();
     });
     println!("Part 1. Total = {}", grid.flashes_count);
+    let mut step = 100;
+    while !grid.is_synced() {
+        grid.handle_step();
+        step += 1;
+    }
+    println!("Part 2. Sync at {}", step);
 }
