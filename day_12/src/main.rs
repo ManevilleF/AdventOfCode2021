@@ -47,18 +47,17 @@ impl FromStr for CaveSystem {
 
 impl CaveSystem {
     fn path_builder(&self, cave: &Cave, mut path: Vec<Cave>, paths: &mut Vec<Vec<Cave>>) {
-        if matches!(cave, Cave::Small(_) | Cave::Start) && path.contains(cave) {
-            return;
-        }
-        path.push(cave.clone());
-        if matches!(cave, Cave::End) {
-            paths.push(path);
-            return;
-        }
-        if let Some(caves) = self.0.get(cave) {
-            caves
-                .iter()
-                .for_each(|cave| self.path_builder(cave, path.clone(), paths));
+        match cave {
+            Cave::End => paths.push(path),
+            Cave::Small(_) | Cave::Start if path.contains(cave) => (),
+            _ => {
+                path.push(cave.clone());
+                if let Some(caves) = self.0.get(cave) {
+                    caves
+                        .iter()
+                        .for_each(|cave| self.path_builder(cave, path.clone(), paths));
+                }
+            }
         }
     }
 
