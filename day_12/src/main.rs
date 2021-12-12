@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-const FILE_PATH: &str = "test.txt";
+const FILE_PATH: &str = "input.txt";
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Cave {
     Start,
     End,
@@ -34,17 +34,42 @@ impl FromStr for CaveSystem {
                 let (from, to) = line
                     .split_once('-')
                     .ok_or_else(|| format!("Invalid line: {}", line))?;
-                let entry = m
-                    .entry(Cave::from(from.to_string()))
-                    .or_insert_with(Vec::new);
-                entry.push(Cave::from(to.to_string()));
+                let (from, to) = (Cave::from(from.to_string()), Cave::from(to.to_string()));
+                let entry = m.entry(from.clone()).or_insert_with(Vec::new);
+                entry.push(to.clone());
+                let entry = m.entry(to).or_insert_with(Vec::new);
+                entry.push(from);
                 Ok(m)
             });
         Ok(Self(map?))
     }
 }
 
+impl CaveSystem {
+    fn path_builder(&self, cave: &Cave, mut path: Vec<Cave>, paths: &mut Vec<Vec<Cave>>) {
+        if matches!(cave, Cave::Small(_) | Cave::Start) && path.contains(cave) {
+            return;
+        }
+        path.push(cave.clone());
+        if matches!(cave, Cave::End) {
+            paths.push(path);
+            return;
+        }
+        if let Some(caves) = self.0.get(cave) {
+            caves
+                .iter()
+                .for_each(|cave| self.path_builder(cave, path.clone(), paths));
+        }
+    }
+
+    fn path_count(&self) -> usize {
+        let mut paths = vec![];
+        self.path_builder(&Cave::Start, vec![], &mut paths);
+        paths.len()
+    }
+}
+
 fn main() {
     let map = CaveSystem::from_str(&std::fs::read_to_string(FILE_PATH).unwrap()).unwrap();
-    println!("{:#?}", map);
+    println!("Part1. Path count = {}", map.path_count());
 }
