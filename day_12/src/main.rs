@@ -31,14 +31,12 @@ impl FromStr for CaveSystem {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let map: Result<HashMap<Cave, Vec<Cave>>, String> =
             s.lines().try_fold(HashMap::new(), |mut m, line| {
-                let (from, to) = line
+                let (f, t) = line
                     .split_once('-')
+                    .map(|(f, t)| (Cave::from(f.to_owned()), Cave::from(t.to_owned())))
                     .ok_or_else(|| format!("Invalid line: {}", line))?;
-                let (from, to) = (Cave::from(from.to_string()), Cave::from(to.to_string()));
-                let entry = m.entry(from.clone()).or_insert_with(Vec::new);
-                entry.push(to.clone());
-                let entry = m.entry(to).or_insert_with(Vec::new);
-                entry.push(from);
+                m.entry(f.clone()).or_insert_with(Vec::new).push(t.clone());
+                m.entry(t).or_insert_with(Vec::new).push(f);
                 Ok(m)
             });
         Ok(Self(map?))
@@ -60,8 +58,8 @@ impl CaveSystem {
             _ => {
                 path.push(cave.clone());
                 if let Some(caves) = self.0.get(cave) {
-                    for cave in caves.iter() {
-                        self.path_builder(cave, path.clone(), paths, criteria.clone());
+                    for ncave in caves.iter() {
+                        self.path_builder(ncave, path.clone(), paths, criteria.clone());
                     }
                 }
             }
@@ -76,12 +74,11 @@ impl CaveSystem {
         if !path.contains(cave) {
             return false;
         }
-        let small_caves: Vec<Cave> = path
+        let small_caves: Vec<&Cave> = path
             .iter()
-            .cloned()
             .filter(|c| matches!(c, Cave::Small(_)))
             .collect();
-        let deduped: HashSet<Cave> = small_caves.iter().cloned().collect();
+        let deduped: HashSet<&Cave> = small_caves.iter().copied().collect();
         small_caves.len() != deduped.len()
     }
 
