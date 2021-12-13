@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 const FILE_PATH: &str = "input.txt";
 
 type Coords = (usize, usize);
@@ -5,17 +7,23 @@ type Coords = (usize, usize);
 #[derive(Debug, Clone)]
 struct HeightMap(Vec<Vec<u8>>);
 
-impl From<String> for HeightMap {
-    fn from(s: String) -> Self {
-        Self(
+impl FromStr for HeightMap {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(
             s.lines()
                 .map(|line| {
                     line.chars()
-                        .filter_map(|c| c.to_digit(10).and_then(|d| d.try_into().ok()))
+                        .map(|c| {
+                            c.to_digit(10)
+                                .and_then(|d| d.try_into().ok())
+                                .ok_or(format!("Invalid line: {}", line))
+                        })
                         .collect()
                 })
-                .collect(),
-        )
+                .collect::<Result<Vec<Vec<u8>>, Self::Err>>()?,
+        ))
     }
 }
 
@@ -81,7 +89,7 @@ impl HeightMap {
 }
 
 fn main() {
-    let map = HeightMap::from(std::fs::read_to_string(FILE_PATH).unwrap());
+    let map = HeightMap::from_str(std::fs::read_to_string(FILE_PATH).unwrap().as_str()).unwrap();
     println!(
         "Part1: risk level = {}",
         map.low_points()
