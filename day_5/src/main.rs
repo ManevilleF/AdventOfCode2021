@@ -13,14 +13,11 @@ impl FromStr for IVec2 {
     type Err = String;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
-        let arr: Vec<i32> = str.split(',').filter_map(|s| s.parse().ok()).collect();
-        let arr: [i32; 2] = arr
-            .try_into()
-            .map_err(|_| format!("{} doesn't have 2 valid elements", str))?;
-        Ok(Self {
-            x: arr[0],
-            y: arr[1],
-        })
+        let (x, y) = str
+            .split_once(',')
+            .and_then(|(x, y)| x.parse().ok().zip(y.parse().ok()))
+            .ok_or(format!("{} doesn't have 2 valid elements", str))?;
+        Ok(Self { x, y })
     }
 }
 
@@ -40,14 +37,11 @@ impl FromStr for Line {
     type Err = String;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
-        let arr: Vec<IVec2> = str.split(" -> ").filter_map(|s| s.parse().ok()).collect();
-        let arr: [IVec2; 2] = arr
-            .try_into()
-            .map_err(|_| format!("{} doesn't have 2 valid elements", str))?;
-        Ok(Self {
-            start: arr[0],
-            end: arr[1],
-        })
+        let (start, end) = str
+            .split_once(" -> ")
+            .and_then(|(x, y)| x.parse().ok().zip(y.parse().ok()))
+            .ok_or(format!("{} doesn't have 2 valid elements", str))?;
+        Ok(Self { start, end })
     }
 }
 
@@ -94,7 +88,7 @@ fn main() {
     let lines: Vec<Line> = std::fs::read_to_string(FILE_PATH)
         .unwrap()
         .split('\n')
-        .filter_map(|s| s.parse().ok())
+        .map(|s| s.parse().unwrap())
         .collect();
     let max_point = lines.iter().fold(IVec2::default(), |acc, line| {
         let x_max = max(line.start.x, line.end.x);

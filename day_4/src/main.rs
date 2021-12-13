@@ -7,11 +7,14 @@ const FILE_PATH: &str = "input.txt";
 struct BingoResults(Vec<u32>);
 
 impl FromStr for BingoResults {
-    type Err = ();
+    type Err = std::num::ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let res = s.split(',').filter_map(|str| str.parse().ok()).collect();
-        Ok(Self(res))
+        Ok(Self(
+            s.split(',')
+                .map(str::parse)
+                .collect::<Result<Vec<u32>, Self::Err>>()?,
+        ))
     }
 }
 
@@ -28,14 +31,17 @@ impl FromStr for BoardLine {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let line: Vec<BoardNumber> = s
-            .split(' ')
-            .filter_map(|str| str.parse().ok())
-            .map(|number| BoardNumber {
-                number,
-                marked: false,
+        let line = s
+            .split_ascii_whitespace()
+            .map(|str| {
+                str.parse()
+                    .map(|number| BoardNumber {
+                        number,
+                        marked: false,
+                    })
+                    .map_err(|e| format!("Invalid line {}: {}", str, e))
             })
-            .collect();
+            .collect::<Result<Vec<BoardNumber>, Self::Err>>()?;
         let line = line
             .try_into()
             .map_err(|_| format!("{} doesn't have 5 valid elements", s))?;
@@ -50,10 +56,10 @@ impl FromStr for Board {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lines: Vec<BoardLine> = s
-            .split('\n')
-            .filter_map(|line| BoardLine::from_str(line).ok())
-            .collect();
+        let lines = s
+            .lines()
+            .map(BoardLine::from_str)
+            .collect::<Result<Vec<BoardLine>, Self::Err>>()?;
         let lines = lines
             .try_into()
             .map_err(|_| format!("{} doesn't have 5 valid elements", s))?;
@@ -116,11 +122,7 @@ impl Board {
 
     fn handle_marked_number(&mut self, number: u32) -> Option<u32> {
         self.mark_number(number);
-        if self.is_completed() {
-            Some(self.unmarked_sum())
-        } else {
-            None
-        }
+        self.is_completed().then(|| self.unmarked_sum())
     }
 }
 
@@ -166,7 +168,7 @@ fn main() {
     let boards: Vec<Board> = contents
         .iter()
         .cloned()
-        .filter_map(|str| Board::from_str(&str).ok())
+        .map(|str| Board::from_str(&str).unwrap())
         .collect();
     let (winner_id, winner_result) = find_winning_board(&bingo_results, boards.clone()).unwrap();
     println!("Part 1: id = {} result = {}", winner_id, winner_result);

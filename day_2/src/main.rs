@@ -13,12 +13,11 @@ impl FromStr for MoveDirection {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let split: Vec<&str> = s.split(' ').collect();
-        if split.len() != 2 {
-            return Err(format!("Wrong format: `{}` cannot be parsed", s));
-        }
-        let value = split[1].parse::<u32>().map_err(|e| e.to_string())?;
-        match split[0] {
+        let (action, value) = s
+            .split_once(' ')
+            .ok_or(format!("Wrong format: `{}` cannot be parsed", s))?;
+        let value = value.parse::<u32>().map_err(|e| e.to_string())?;
+        match action {
             "down" => Ok(Self::Down(value)),
             "forward" => Ok(Self::Forward(value)),
             "up" => Ok(Self::Up(value)),
@@ -49,7 +48,7 @@ fn main() {
     let file_content: Vec<MoveDirection> = std::fs::read_to_string(FILE_PATH)
         .unwrap()
         .split('\n')
-        .filter_map(|str| MoveDirection::from_str(str).ok())
+        .map(|str| MoveDirection::from_str(str).unwrap())
         .collect();
     part_1(file_content.iter().copied());
     part_2(file_content.into_iter());

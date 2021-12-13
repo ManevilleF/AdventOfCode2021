@@ -9,10 +9,10 @@ fn main() {
     let mut timers = std::fs::read_to_string(FILE_PATH)
         .unwrap()
         .split(',')
-        .filter_map(|s| s.parse::<usize>().ok())
+        .map(|s| s.parse::<usize>().unwrap())
         .fold([0_usize; 9], |mut map, timer| {
             if let Some(v) = map.get_mut(timer) {
-                *v += 1
+                *v += 1;
             }
             map
         });
