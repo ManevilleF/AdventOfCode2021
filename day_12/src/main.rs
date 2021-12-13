@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 const FILE_PATH: &str = "input.txt";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Cave {
     Start,
     End,
@@ -23,20 +23,22 @@ impl From<String> for Cave {
 }
 
 #[derive(Debug)]
-struct CaveSystem(HashMap<Cave, Vec<Cave>>);
+struct CaveSystem(HashMap<Cave, HashSet<Cave>>);
 
 impl FromStr for CaveSystem {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let map: Result<HashMap<Cave, Vec<Cave>>, String> =
+        let map: Result<HashMap<Cave, HashSet<Cave>>, String> =
             s.lines().try_fold(HashMap::new(), |mut m, line| {
-                let (f, t) = line
+                let (from, to) = line
                     .split_once('-')
                     .map(|(f, t)| (Cave::from(f.to_owned()), Cave::from(t.to_owned())))
                     .ok_or_else(|| format!("Invalid line: {}", line))?;
-                m.entry(f.clone()).or_insert_with(Vec::new).push(t.clone());
-                m.entry(t).or_insert_with(Vec::new).push(f);
+                m.entry(from.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(to.clone());
+                m.entry(to).or_insert_with(HashSet::new).insert(from);
                 Ok(m)
             });
         Ok(Self(map?))
@@ -60,8 +62,8 @@ impl CaveSystem {
         }
         path.push(cave.clone());
         if let Some(caves) = self.0.get(cave) {
-            for ncave in caves.iter() {
-                self.path_builder(ncave, path.clone(), paths, double_pass);
+            for new_cave in caves {
+                self.path_builder(new_cave, path.clone(), paths, double_pass);
             }
         }
     }
