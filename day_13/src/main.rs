@@ -1,4 +1,3 @@
-#![feature(hash_drain_filter)]
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -52,26 +51,24 @@ impl FromStr for Positions {
 
 impl Positions {
     pub fn fold(&mut self, instruction: FoldAlong) {
-        let folded_values: HashSet<Coords> = self
+        let folded_values: Vec<(Coords, Coords)> = self
             .0
-            // WARNING: unstable, use nightly toolchain
-            .drain_filter(|(x, y)| match &instruction {
-                FoldAlong::X(x_treshold) => x_treshold < x,
-                FoldAlong::Y(y_treshold) => y_treshold < y,
-            })
+            .iter()
+            .copied()
             .filter_map(|(x, y)| match &instruction {
                 FoldAlong::X(x_treshold) => x
                     .checked_sub(*x_treshold)
                     .and_then(|delta| x_treshold.checked_sub(delta))
-                    .map(|x| (x, y)),
+                    .map(|v| ((x, y), (v, y))),
                 FoldAlong::Y(y_treshold) => y
                     .checked_sub(*y_treshold)
                     .and_then(|delta| y_treshold.checked_sub(delta))
-                    .map(|y| (x, y)),
+                    .map(|v| ((x, y), (x, v))),
             })
             .collect();
-        for v in folded_values {
-            self.0.insert(v);
+        for (delete, insert) in folded_values {
+            self.0.remove(&delete);
+            self.0.insert(insert);
         }
     }
 
@@ -96,8 +93,8 @@ impl Display for Positions {
         let buff = (0..=y_max)
             .map(|y| {
                 (0..=x_max)
-                    .map(|x| self.0.get(&(x, y)).map(|_| '#').unwrap_or('.'))
-                    .collect::<String>()
+                    .map(|x| self.0.get(&(x, y)).map_or('.', |_| '#'))
+                    .collect()
             })
             .collect::<Vec<String>>();
         write!(f, "{}", buff.join("\n"))
