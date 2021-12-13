@@ -33,6 +33,23 @@ impl FromStr for FoldAlong {
     }
 }
 
+impl FoldAlong {
+    fn coords_to_fold_closure(self) -> Box<dyn Fn(&Coords) -> Option<(Coords, Coords)>> {
+        match self {
+            Self::X(threshold) => Box::new(move |(x, y): &Coords| {
+                x.checked_sub(threshold)
+                    .and_then(|delta| threshold.checked_sub(delta))
+                    .map(|v| ((*x, *y), (v, *y)))
+            }),
+            Self::Y(threshold) => Box::new(move |(x, y): &Coords| {
+                y.checked_sub(threshold)
+                    .and_then(|delta| threshold.checked_sub(delta))
+                    .map(|v| ((*x, *y), (*x, v)))
+            }),
+        }
+    }
+}
+
 impl FromStr for Positions {
     type Err = String;
 
@@ -41,7 +58,7 @@ impl FromStr for Positions {
             .lines()
             .map(|l| {
                 l.split_once(',')
-                    .and_then(|(x, y)| x.parse::<u32>().ok().zip(y.parse::<u32>().ok()))
+                    .and_then(|(x, y)| x.parse().ok().zip(y.parse().ok()))
                     .ok_or(format!("Expected two valid elements in {}", l))
             })
             .collect::<Result<HashSet<Coords>, Self::Err>>()?;
@@ -51,21 +68,8 @@ impl FromStr for Positions {
 
 impl Positions {
     pub fn fold(&mut self, instruction: FoldAlong) {
-        let folded_values: Vec<(Coords, Coords)> = self
-            .0
-            .iter()
-            .copied()
-            .filter_map(|(x, y)| match &instruction {
-                FoldAlong::X(x_treshold) => x
-                    .checked_sub(*x_treshold)
-                    .and_then(|delta| x_treshold.checked_sub(delta))
-                    .map(|v| ((x, y), (v, y))),
-                FoldAlong::Y(y_treshold) => y
-                    .checked_sub(*y_treshold)
-                    .and_then(|delta| y_treshold.checked_sub(delta))
-                    .map(|v| ((x, y), (x, v))),
-            })
-            .collect();
+        let func = instruction.coords_to_fold_closure();
+        let folded_values: Vec<(Coords, Coords)> = self.0.iter().filter_map(func).collect();
         for (delete, insert) in folded_values {
             self.0.remove(&delete);
             self.0.insert(insert);
@@ -73,17 +77,10 @@ impl Positions {
     }
 
     pub fn max_coords(&self) -> Coords {
-        self.0
-            .iter()
-            .fold((0, 0), |(mut x_acc, mut y_acc), (x, y)| {
-                if *x > x_acc {
-                    x_acc = *x;
-                }
-                if *y > y_acc {
-                    y_acc = *y;
-                }
-                (x_acc, y_acc)
-            })
+        (
+            self.0.iter().max_by_key(|(x, _)| x).map_or(0, |(x, _)| *x),
+            self.0.iter().max_by_key(|(_, y)| y).map_or(0, |(_, y)| *y),
+        )
     }
 }
 
@@ -93,7 +90,7 @@ impl Display for Positions {
         let buff = (0..=y_max)
             .map(|y| {
                 (0..=x_max)
-                    .map(|x| self.0.get(&(x, y)).map_or('.', |_| '#'))
+                    .map(|x| self.0.get(&(x, y)).map_or(' ', |_| '#'))
                     .collect()
             })
             .collect::<Vec<String>>();
@@ -109,7 +106,7 @@ fn main() {
             (
                 Positions::from_str(p).unwrap(),
                 f.lines()
-                    .map(|i| FoldAlong::from_str(i).unwrap())
+                    .map(|l| FoldAlong::from_str(l).unwrap())
                     .collect::<Vec<FoldAlong>>(),
             )
         })
@@ -117,8 +114,8 @@ fn main() {
     for (i, fold_instruction) in fold_instructions.into_iter().enumerate() {
         positions.fold(fold_instruction);
         if i == 0 {
-            println!("Part 1: {} Dots visible", positions.0.len());
+            println!("Part 1: {} dots visible", positions.0.len());
         }
     }
-    println!("Part2: \n{}", positions);
+    println!("Part 2: \n{}", positions);
 }
