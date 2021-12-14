@@ -19,3 +19,4 @@ My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
 | 11 | [Dumbo Octopus](day_11/src/main.rs) | 2 / 2 |
 | 12 | [Passage Pathing](day_12/src/main.rs) | 2 / 2 |
 | 13 | [Transparent Origami](day_13/src/main.rs) | 2 / 2 |
+| 14 | [Extended Polymerization](day_14/src/main.rs) | 2 / 2 |
