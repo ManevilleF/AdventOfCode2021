@@ -1,7 +1,7 @@
 # Advent Of Code 2021
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![workflow](https://github.com/ManevilleF/AdventOfCode2021/actions/workflows/rust.yml/badge.svg)](https://github.com/ManevilleF/AdventOfCode2021/actions/workflows/rust.yml)
+[![workflow](https://github.com/ManevilleF/AdventOfCode2021/actions/workflows/rust.yaml/badge.svg)](https://github.com/ManevilleF/AdventOfCode2021/actions/workflows/rust.yaml)
 
 My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
 
