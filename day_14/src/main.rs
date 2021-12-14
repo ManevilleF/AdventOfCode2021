@@ -6,29 +6,35 @@ const FILE_PATH: &str = "input.txt";
 type Pair = [char; 2];
 
 #[derive(Debug)]
-struct Polymer(HashMap<Pair, usize>);
+struct Polymer {
+    pub pairs: HashMap<Pair, usize>,
+    pub counts: HashMap<char, usize>,
+}
 
 #[derive(Debug)]
-struct PairInsertion(HashMap<Pair, [Pair; 2]>);
+struct PairInsertions(HashMap<Pair, char>);
 
 impl FromStr for Polymer {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let chars: Vec<char> = s.chars().collect();
-        let map: Result<HashMap<Pair, usize>, Self::Err> =
-            chars.windows(2).try_fold(HashMap::new(), |mut acc, win| {
-                let key: [char; 2] = (*win)
-                    .try_into()
-                    .map_err(|e| format!("Invalid char pair {:?}, {}", win, e))?;
-                *acc.entry(key).or_insert(0) += 1;
-                Ok(acc)
-            });
-        Ok(Self(map?))
+        let counts = chars.iter().fold(HashMap::new(), |mut acc, c| {
+            *acc.entry(*c).or_insert(0) += 1;
+            acc
+        });
+        let pairs = chars.windows(2).try_fold(HashMap::new(), |mut acc, win| {
+            let key: [char; 2] = (*win)
+                .try_into()
+                .map_err(|e| format!("Invalid char pair {:?}, {}", win, e))?;
+            *acc.entry(key).or_insert(0) += 1;
+            Result::<_, Self::Err>::Ok(acc)
+        })?;
+        Ok(Self { pairs, counts })
     }
 }
 
-impl FromStr for PairInsertion {
+impl FromStr for PairInsertions {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -43,55 +49,50 @@ impl FromStr for PairInsertion {
                         )
                     })
                     .and_then(|(l, r)| l.try_into().ok().zip(r.first().copied()))
-                    .map(|(k, c): (Pair, char)| (k, [[k[0], c], [c, k[1]]]))
                     .ok_or_else(|| format!("Wrong line {}", l))
             })
-            .collect::<Result<HashMap<Pair, [Pair; 2]>, Self::Err>>()?;
+            .collect::<Result<HashMap<Pair, char>, Self::Err>>()?;
         Ok(Self(map))
     }
 }
 
-impl PairInsertion {
+impl PairInsertions {
     pub fn apply_to_polymer(&self, polymer: Polymer) -> Polymer {
-        let new_polymer = polymer
-            .0
-            .into_iter()
-            .fold(HashMap::new(), |mut acc, (k, v)| {
-                if let Some(pairs) = self.0.get(&k).copied() {
-                    pairs
-                        .into_iter()
-                        .for_each(|pair| *acc.entry(pair).or_insert(0) += v);
+        polymer.pairs.into_iter().fold(
+            Polymer {
+                pairs: HashMap::default(),
+                counts: polymer.counts,
+            },
+            |mut poly, (k, v)| {
+                if let Some(insertion) = self.0.get(&k) {
+                    *poly.counts.entry(*insertion).or_insert(0) += v;
+                    for pair in [[k[0], *insertion], [*insertion, k[1]]] {
+                        *poly.pairs.entry(pair).or_insert(0) += v;
+                    }
                 }
-                acc
-            });
-        Polymer(new_polymer)
+                poly
+            },
+        )
     }
 }
 
 impl Polymer {
-    fn repartition(&self) -> HashMap<char, usize> {
-        self.0.iter().fold(HashMap::new(), |mut acc, (k, v)| {
-            *acc.entry(k[0]).or_insert(0) += *v;
-            acc
-        })
-    }
-
     fn subtracted_repartition(&self) -> usize {
-        match self.repartition().values().minmax() {
+        match self.counts.values().minmax() {
             MinMaxResult::NoElements | MinMaxResult::OneElement(_) => 0,
-            MinMaxResult::MinMax(min, max) => max.saturating_sub(min + 1),
+            MinMaxResult::MinMax(min, max) => max.saturating_sub(*min),
         }
     }
 }
 
 fn main() {
-    let (mut polymer, pairs): (Polymer, PairInsertion) = std::fs::read_to_string(FILE_PATH)
+    let (mut polymer, pairs): (Polymer, PairInsertions) = std::fs::read_to_string(FILE_PATH)
         .unwrap()
         .split_once("\n\n")
         .map(|(poly, pairs)| {
             (
                 Polymer::from_str(poly).unwrap(),
-                PairInsertion::from_str(pairs).unwrap(),
+                PairInsertions::from_str(pairs).unwrap(),
             )
         })
         .unwrap();
