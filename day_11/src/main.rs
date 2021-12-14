@@ -48,6 +48,7 @@ impl SquidGrid {
         (-1, -1), // BOTTOM LEFT
     ];
 
+    #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
     fn neighbor_coords((x, y): (usize, usize)) -> Vec<(usize, usize)> {
         Self::NEIGHBOR_COORDS
             .iter()
