@@ -72,11 +72,9 @@ impl Map {
         let mut stack = HashMap::new();
         stack.insert([0, 0], 0);
         let mut handled = vec![];
-        let mut results = Vec::new();
         while let Some((coord, cost)) = Self::pop_from_stack(&mut stack) {
             if coord == self.max_coords {
-                results.push(cost);
-                continue;
+                return Some(cost);
             }
             for (neighbor, new_cost) in self
                 .neighbor_coordinates(coord)
@@ -91,7 +89,7 @@ impl Map {
             }
             handled.push(coord);
         }
-        results.into_iter().min()
+        None
     }
 }
 
