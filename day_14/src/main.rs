@@ -49,7 +49,7 @@ impl FromStr for PairInsertions {
                         )
                     })
                     .and_then(|(l, r)| l.try_into().ok().zip(r.first().copied()))
-                    .ok_or_else(|| format!("Wrong line {}", l))
+                    .ok_or(format!("Wrong line {}", l))
             })
             .try_collect()?;
         Ok(Self(map))
