@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::usize;
 
 const FILE_PATH: &str = "input.txt";
 
@@ -74,21 +73,19 @@ impl Packet {
                         break;
                     }
                 }
-                PacketType::Literal(
-                    u64::from_str_radix(&buff, 2)
-                        .map_err(|e| format!("Invalid literal value {}", e))?,
-                )
+                let value =
+                    u64::from_str_radix(&buff, 2).map_err(|e| format!("Invalid literal {}", e))?;
+                PacketType::Literal(value)
             }
             type_id => {
                 let packet_length = SubPacketLength::from_str(&s[index..])?;
-                index += 1;
                 let packets = match packet_length {
                     SubPacketLength::Bits(len) => {
-                        index += 15;
+                        index += 16;
                         let mut packets = Vec::new();
-                        let l = index + len;
-                        while index < l {
-                            let packet_str = &s[index..l];
+                        let len = index + len;
+                        while index < len {
+                            let packet_str = &s[index..len];
                             let (packet, delta) = Self::parse(packet_str)?;
                             packets.push(packet);
                             index += delta;
@@ -96,15 +93,14 @@ impl Packet {
                         packets
                     }
                     SubPacketLength::Count(len) => {
-                        index += 11;
-                        let mut packets = Vec::new();
-                        for _ in 0..len {
+                        index += 12;
+                        (0..len).try_fold(vec![], |mut packets, _| {
                             let packet_str = &s[index..];
                             let (packet, delta) = Self::parse(packet_str)?;
                             index += delta;
                             packets.push(packet);
-                        }
-                        packets
+                            Result::<_, String>::Ok(packets)
+                        })?
                     }
                 };
                 match type_id {
@@ -131,13 +127,11 @@ impl Packet {
                 }
             }
         };
-        Ok((
-            Self {
-                version,
-                packet_type: Box::new(packet_type),
-            },
-            index,
-        ))
+        let res = Self {
+            version,
+            packet_type: Box::new(packet_type),
+        };
+        Ok((res, index))
     }
 
     fn result(&self) -> u64 {
@@ -171,19 +165,19 @@ impl Packet {
         }
     }
 
-    fn version_sum(&self) -> usize {
-        let mut res = self.version as usize;
+    fn version_sum(&self) -> u32 {
+        let mut res = self.version.into();
         match self.packet_type.as_ref() {
             PacketType::Sum(packets)
             | PacketType::Product(packets)
             | PacketType::Min(packets)
             | PacketType::Max(packets) => {
-                res += packets.iter().map(Self::version_sum).sum::<usize>();
+                res += packets.iter().map(Self::version_sum).sum::<u32>();
             }
             PacketType::GtrThan(packets)
             | PacketType::LesserThan(packets)
             | PacketType::EqTo(packets) => {
-                res += packets.iter().map(Self::version_sum).sum::<usize>();
+                res += packets.iter().map(Self::version_sum).sum::<u32>();
             }
             PacketType::Literal(_) => (),
         }
@@ -196,34 +190,14 @@ fn main() {
     for (i, line) in input.lines().enumerate() {
         let line = line
             .chars()
-            .map(|c| match c {
-                '0' => "0000",
-                '1' => "0001",
-                '2' => "0010",
-                '3' => "0011",
-                '4' => "0100",
-                '5' => "0101",
-                '6' => "0110",
-                '7' => "0111",
-                '8' => "1000",
-                '9' => "1001",
-                'A' => "1010",
-                'B' => "1011",
-                'C' => "1100",
-                'D' => "1101",
-                'E' => "1110",
-                'F' => "1111",
-                _ => panic!("Invalid char {}", c),
+            .map(|c| {
+                format!(
+                    "{:04b}",
+                    u8::from_str_radix(c.to_string().as_str(), 16).unwrap()
+                )
             })
             .collect::<String>();
-        let (packet, _) = match Packet::parse(&line) {
-            Ok(p) => p,
-            Err(e) => {
-                println!("{}", e);
-                continue;
-            }
-        };
-        // println!("{:#?}", packet);
+        let (packet, _) = Packet::parse(&line).unwrap();
         println!(
             "Line {}: version sum = {}, result = {}",
             i,
