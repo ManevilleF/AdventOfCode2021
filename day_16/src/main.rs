@@ -2,6 +2,15 @@ use std::str::FromStr;
 
 const FILE_PATH: &str = "input.txt";
 
+macro_rules! substr {
+    ($binary:expr, $range:expr) => {
+        $binary.get($range).ok_or(format!(
+            "Can't get sub string {:?} from packet {}",
+            $range, $binary
+        ))?
+    };
+}
+
 #[derive(Debug, Copy, Clone)]
 enum SubPacketLength {
     Bits(usize),
@@ -74,7 +83,7 @@ impl Packet {
             4 => {
                 let mut buff = String::new();
                 while let Some(s) = binary.get(index..index + 5) {
-                    buff = format!("{}{}", buff, &s[1..]);
+                    buff = format!("{}{}", buff, &s[1..]); // Safe
                     index += 5;
                     if s.starts_with('0') {
                         break;
@@ -85,14 +94,14 @@ impl Packet {
                 PacketType::Literal(value)
             }
             type_id => {
-                let packet_length = SubPacketLength::from_str(&binary[index..])?;
+                let packet_length = SubPacketLength::from_str(substr!(binary, index..))?;
                 let packets = match packet_length {
                     SubPacketLength::Bits(len) => {
                         index += 16;
                         let mut packets = Vec::new();
                         let len = index + len;
                         while index < len {
-                            let packet_str = &binary[index..len];
+                            let packet_str = substr!(binary, index..len);
                             let (packet, delta) = Self::parse(packet_str)?;
                             packets.push(packet);
                             index += delta;
@@ -102,7 +111,7 @@ impl Packet {
                     SubPacketLength::Count(len) => {
                         index += 12;
                         (0..len).try_fold(vec![], |mut packets, _| {
-                            let packet_str = &binary[index..];
+                            let packet_str = substr!(binary, index..);
                             let (packet, delta) = Self::parse(packet_str)?;
                             index += delta;
                             packets.push(packet);
