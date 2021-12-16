@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::usize;
 
-const FILE_PATH: &str = "test.txt";
+const FILE_PATH: &str = "input.txt";
 
 #[derive(Debug, Copy, Clone)]
 enum SubPacketLength {
@@ -11,19 +11,24 @@ enum SubPacketLength {
 
 #[derive(Debug, Clone)]
 enum PacketType {
-    Literal(u64), // 4
-    Operation { type_id: u8, packets: Vec<Packet> },
+    Literal(u64),
+    Sum(Vec<Packet>),
+    Product(Vec<Packet>),
+    Min(Vec<Packet>),
+    Max(Vec<Packet>),
+    GtrThan([Packet; 2]),
+    LesserThan([Packet; 2]),
+    EqTo([Packet; 2]),
 }
 
 #[derive(Debug, Clone)]
 struct Packet {
     version: u8,
-    packet_type: PacketType,
+    packet_type: Box<PacketType>,
 }
 
 impl SubPacketLength {
     fn get_length(s: &str, len: usize) -> Result<usize, String> {
-        println!("length in {}", &s[..=len]);
         let res = s
             .get(1..=len)
             .map(|r| u32::from_str_radix(r, 2).map_err(|e| format!("Invalid packet length: {}", e)))
@@ -79,52 +84,108 @@ impl Packet {
                 index += 1;
                 let packets = match packet_length {
                     SubPacketLength::Bits(len) => {
-                        println!("Found bit len {}", len);
                         index += 15;
                         let mut packets = Vec::new();
                         let l = index + len;
                         while index < l {
-                            println!("index = {}, len = {}", index, l);
                             let packet_str = &s[index..l];
                             let (packet, delta) = Self::parse(packet_str)?;
-                            println!("Found packet {:?} and delta {}", packet, delta);
                             packets.push(packet);
                             index += delta;
                         }
-                        index += len;
                         packets
                     }
                     SubPacketLength::Count(len) => {
-                        println!("Found count len {}", len);
                         index += 11;
                         let mut packets = Vec::new();
                         for _ in 0..len {
-                            println!("index = {}", index);
                             let packet_str = &s[index..];
                             let (packet, delta) = Self::parse(packet_str)?;
-                            println!("Found packet {:?} and delta {}", packet, delta);
                             index += delta;
                             packets.push(packet);
                         }
                         packets
                     }
                 };
-                PacketType::Operation { type_id, packets }
+                match type_id {
+                    0 => PacketType::Sum(packets),
+                    1 => PacketType::Product(packets),
+                    2 => PacketType::Min(packets),
+                    3 => PacketType::Max(packets),
+                    5 => PacketType::GtrThan(
+                        packets
+                            .try_into()
+                            .map_err(|_| String::from("Expected exactly 2 sub packets"))?,
+                    ),
+                    6 => PacketType::LesserThan(
+                        packets
+                            .try_into()
+                            .map_err(|_| String::from("Expected exactly 2 sub packets"))?,
+                    ),
+                    7 => PacketType::EqTo(
+                        packets
+                            .try_into()
+                            .map_err(|_| String::from("Expected exactly 2 sub packets"))?,
+                    ),
+                    v => return Err(format!("{} is not a valid packet type id", v)),
+                }
             }
         };
         Ok((
             Self {
                 version,
-                packet_type,
+                packet_type: Box::new(packet_type),
             },
             index,
         ))
     }
 
+    fn result(&self) -> u64 {
+        match self.packet_type.as_ref() {
+            PacketType::Literal(v) => *v,
+            PacketType::Sum(packets) => packets.iter().map(Self::result).sum(),
+            PacketType::Product(packets) => packets.iter().map(Self::result).product(),
+            PacketType::Min(packets) => packets.iter().map(Self::result).min().unwrap_or(0),
+            PacketType::Max(packets) => packets.iter().map(Self::result).max().unwrap_or(0),
+            PacketType::GtrThan(packets) => {
+                if packets[0].result() > packets[1].result() {
+                    1
+                } else {
+                    0
+                }
+            }
+            PacketType::LesserThan(packets) => {
+                if packets[0].result() < packets[1].result() {
+                    1
+                } else {
+                    0
+                }
+            }
+            PacketType::EqTo(packets) => {
+                if packets[0].result() == packets[1].result() {
+                    1
+                } else {
+                    0
+                }
+            }
+        }
+    }
+
     fn version_sum(&self) -> usize {
         let mut res = self.version as usize;
-        if let PacketType::Operation { packets, .. } = &self.packet_type {
-            res += packets.iter().map(Self::version_sum).sum::<usize>();
+        match self.packet_type.as_ref() {
+            PacketType::Sum(packets)
+            | PacketType::Product(packets)
+            | PacketType::Min(packets)
+            | PacketType::Max(packets) => {
+                res += packets.iter().map(Self::version_sum).sum::<usize>();
+            }
+            PacketType::GtrThan(packets)
+            | PacketType::LesserThan(packets)
+            | PacketType::EqTo(packets) => {
+                res += packets.iter().map(Self::version_sum).sum::<usize>();
+            }
+            PacketType::Literal(_) => (),
         }
         res
     }
@@ -155,9 +216,19 @@ fn main() {
                 _ => panic!("Invalid char {}", c),
             })
             .collect::<String>();
-        println!("{}", line);
-        let (packet, _) = Packet::parse(&line).unwrap();
-        println!("{:#?}", packet);
-        println!("Line {}: {}", i, packet.version_sum());
+        let (packet, _) = match Packet::parse(&line) {
+            Ok(p) => p,
+            Err(e) => {
+                println!("{}", e);
+                continue;
+            }
+        };
+        // println!("{:#?}", packet);
+        println!(
+            "Line {}: version sum = {}, result = {}",
+            i,
+            packet.version_sum(),
+            packet.result()
+        );
     }
 }

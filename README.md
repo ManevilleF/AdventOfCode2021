@@ -22,4 +22,4 @@ My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
 | 13 | [Transparent Origami](day_13/src/main.rs) | 2 / 2 |
 | 14 | [Extended Polymerization](day_14/src/main.rs) | 2 / 2 |
 | 15 | [Chiton](day_15/src/main.rs) | 2 / 2 |
-| 16 | [Packet Decoder](day_16/src/main.rs) | 0 / 2 |
+| 16 | [Packet Decoder](day_16/src/main.rs) | 2 / 2 |
