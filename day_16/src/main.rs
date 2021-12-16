@@ -11,13 +11,11 @@ macro_rules! substr {
     };
 }
 
-#[derive(Debug, Copy, Clone)]
 enum SubPacketLength {
     Bits(usize),
     Count(usize),
 }
 
-#[derive(Debug, Clone)]
 enum PacketType {
     Literal(u64),
     Sum(Vec<Packet>),
@@ -29,7 +27,6 @@ enum PacketType {
     EqTo([Packet; 2]),
 }
 
-#[derive(Debug, Clone)]
 struct Packet {
     version: u8,
     packet_type: Box<PacketType>,
