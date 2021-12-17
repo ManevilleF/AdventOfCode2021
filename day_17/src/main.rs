@@ -1,8 +1,18 @@
 use glam::IVec2;
+use regex::{Captures, Regex};
 use std::str::FromStr;
 
+lazy_static::lazy_static! {
+    static ref REGEX: Regex = Regex::new(r#"x=(-?\d+)\.\.(-?\d+), y=(-?\d+)\.\.(-?\d+)"#).unwrap();
+}
 const FILE_PATH: &str = "input.txt";
-const GRAVITY: IVec2 = IVec2::Y;
+
+fn get_capture(captures: &Captures, index: usize) -> Result<i32, String> {
+    captures
+        .get(index)
+        .and_then(|v| v.as_str().parse().ok())
+        .ok_or_else(|| String::from("Invalid value"))
+}
 
 #[derive(Debug)]
 struct Bounds {
@@ -14,27 +24,15 @@ impl FromStr for Bounds {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let str = s
-            .strip_prefix("target area: ")
-            .ok_or(format!("Invalid str {}", s))?;
-        let (min, max) = str
-            .split_once(',')
-            .and_then(|(x, y)| {
-                x.strip_prefix("x=").and_then(|v| {
-                    v.split_once("..")
-                        .and_then(|(x_min, x_max)| x_min.parse().ok().zip(x_max.parse().ok()))
-                        .zip(y.trim().strip_prefix("y=").and_then(|v| {
-                            v.split_once("..").and_then(|(y_min, y_max)| {
-                                y_min.parse().ok().zip(y_max.parse().ok())
-                            })
-                        }))
-                })
-            })
-            .map(|((x_min, x_max), (y_min, y_max))| {
-                (IVec2::new(x_min, y_min), IVec2::new(x_max, y_max))
-            })
-            .ok_or(format!("Invalid str: {}", str))?;
-        Ok(Self { min, max })
+        let captures = REGEX.captures(s).ok_or(format!("Invalid str {}", s))?;
+        let x_min = get_capture(&captures, 1)?;
+        let x_max = get_capture(&captures, 2)?;
+        let y_min = get_capture(&captures, 3)?;
+        let y_max = get_capture(&captures, 4)?;
+        Ok(Self {
+            min: IVec2::new(x_min, y_min),
+            max: IVec2::new(x_max, y_max),
+        })
     }
 }
 
@@ -59,17 +57,17 @@ fn max_y_with_velocity(mut velocity: IVec2, bounds: &Bounds) -> Option<i32> {
         if pos.y > max_y.unwrap_or(i32::MIN) {
             max_y = Some(pos.y);
         }
-        velocity -= GRAVITY; // Gravity
+        velocity -= IVec2::Y; // Gravity
         velocity.x -= velocity.x.signum(); // Drag
     }
     max_y
 }
 
-fn compute_velocities(bounds: &Bounds) -> (Vec<IVec2>, Option<i32>) {
+fn compute_velocities(bounds: &Bounds) -> (usize, Option<i32>) {
     let mut max_y_pos = None;
-    let velocities = (bounds.min.y..=bounds.max.x)
+    let count = (bounds.min.y..=bounds.max.x)
         .rev()
-        .flat_map(|y| {
+        .map(|y| {
             (1..=bounds.max.x)
                 .filter_map(|x| {
                     let velocity = IVec2::new(x, y);
@@ -79,17 +77,17 @@ fn compute_velocities(bounds: &Bounds) -> (Vec<IVec2>, Option<i32>) {
                     }
                     Some(velocity)
                 })
-                .collect::<Vec<IVec2>>()
+                .count()
         })
-        .collect();
-    (velocities, max_y_pos)
+        .sum();
+    (count, max_y_pos)
 }
 
 fn main() {
     let bounds = Bounds::from_str(std::fs::read_to_string(FILE_PATH).unwrap().as_str()).unwrap();
     let (velocities, max_y) = compute_velocities(&bounds);
     println!("Part 1: Max Y pos is {}", max_y.unwrap());
-    println!("Part 2: There are {} valid velocities", velocities.len());
+    println!("Part 2: There are {} valid velocities", velocities);
 }
 
 #[cfg(test)]
@@ -116,7 +114,7 @@ mod tests {
             max: IVec2::new(30, -5),
         };
         let (res, max) = compute_velocities(&bounds);
-        assert_eq!(res.len(), 112);
+        assert_eq!(res, 112);
         assert_eq!(max, Some(45));
     }
 }

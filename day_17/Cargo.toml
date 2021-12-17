@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 glam = "0.20"
+regex = "1.5"
+lazy_static = "1.4"
