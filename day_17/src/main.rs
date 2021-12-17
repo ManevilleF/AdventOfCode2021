@@ -23,7 +23,7 @@ impl FromStr for Bounds {
                 x.strip_prefix("x=").and_then(|v| {
                     v.split_once("..")
                         .and_then(|(x_min, x_max)| x_min.parse().ok().zip(x_max.parse().ok()))
-                        .zip(y.strip_prefix(" y=").and_then(|v| {
+                        .zip(y.trim().strip_prefix("y=").and_then(|v| {
                             v.split_once("..").and_then(|(y_min, y_max)| {
                                 y_min.parse().ok().zip(y_max.parse().ok())
                             })
@@ -50,35 +50,38 @@ impl Bounds {
 
 fn max_y_with_velocity(mut velocity: IVec2, bounds: &Bounds) -> Option<i32> {
     let mut pos = IVec2::ZERO;
-    let mut max_y = 0;
+    let mut max_y = None;
     while !bounds.in_bounds(pos) {
         if bounds.out_of_bounds(pos) {
             return None;
         }
         pos += velocity;
-        if pos.y > max_y {
-            max_y = pos.y;
+        if pos.y > max_y.unwrap_or(i32::MIN) {
+            max_y = Some(pos.y);
         }
-        velocity -= GRAVITY;
-        velocity.x -= velocity.x.signum();
+        velocity -= GRAVITY; // Gravity
+        velocity.x -= velocity.x.signum(); // Drag
     }
-    Some(max_y)
+    max_y
 }
 
 fn compute_velocities(bounds: &Bounds) -> (Vec<IVec2>, Option<i32>) {
     let mut max_y_pos = None;
-    let mut velocities = vec![];
-    for y in (bounds.min.y..=bounds.max.x).rev() {
-        for x in 1..=bounds.max.x {
-            let velocity = IVec2::new(x, y);
-            if let Some(pos) = max_y_with_velocity(velocity, bounds) {
-                if max_y_pos.is_none() {
-                    max_y_pos = Some(pos);
-                }
-                velocities.push(velocity);
-            }
-        }
-    }
+    let velocities = (bounds.min.y..=bounds.max.x)
+        .rev()
+        .flat_map(|y| {
+            (1..=bounds.max.x)
+                .filter_map(|x| {
+                    let velocity = IVec2::new(x, y);
+                    let pos = max_y_with_velocity(velocity, bounds)?;
+                    if max_y_pos.is_none() {
+                        max_y_pos = Some(pos);
+                    }
+                    Some(velocity)
+                })
+                .collect::<Vec<IVec2>>()
+        })
+        .collect();
     (velocities, max_y_pos)
 }
 
