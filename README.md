@@ -24,4 +24,4 @@ My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
 | 15 | [Chiton](day_15/src/main.rs) | 2 / 2 |
 | 16 | [Packet Decoder](day_16/src/main.rs) | 2 / 2 |
 | 17 | [Trick Shot](day_17/src/main.rs) | 2 / 2 |
-| 18 | [Snailfish](day_18/src/main.rs) | 0/ 2 |
+| 18 | [Snailfish](day_18/src/main.rs) | 0 / 2 |
