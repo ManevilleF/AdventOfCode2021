@@ -29,19 +29,18 @@ impl FromStr for CaveSystem {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let map: Result<HashMap<Cave, HashSet<Cave>>, String> =
-            s.lines().try_fold(HashMap::new(), |mut m, line| {
-                let (from, to) = line
-                    .split_once('-')
-                    .map(|(f, t)| (Cave::from(f.to_owned()), Cave::from(t.to_owned())))
-                    .ok_or_else(|| format!("Invalid line: {}", line))?;
-                m.entry(from.clone())
-                    .or_insert_with(HashSet::new)
-                    .insert(to.clone());
-                m.entry(to).or_insert_with(HashSet::new).insert(from);
-                Ok(m)
-            });
-        Ok(Self(map?))
+        let map = s.lines().try_fold(HashMap::new(), |mut m, line| {
+            let (from, to) = line
+                .split_once('-')
+                .map(|(f, t)| (Cave::from(f.to_owned()), Cave::from(t.to_owned())))
+                .ok_or_else(|| format!("Invalid line: {}", line))?;
+            m.entry(from.clone())
+                .or_insert_with(HashSet::new)
+                .insert(to.clone());
+            m.entry(to).or_insert_with(HashSet::new).insert(from);
+            Result::<_, String>::Ok(m)
+        })?;
+        Ok(Self(map))
     }
 }
 
