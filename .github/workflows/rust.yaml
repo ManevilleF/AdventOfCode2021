@@ -24,6 +24,13 @@ jobs:
       - name: Check Formatting
         run: cargo fmt --all -- --check
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run tests
+        run: cargo test
+
   clippy:
     runs-on: ubuntu-latest
     steps:

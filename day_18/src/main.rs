@@ -1,3 +1,8 @@
+#![allow(
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation
+)]
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Not};
 
@@ -29,7 +34,7 @@ impl Not for Direction {
 
 #[derive(Debug, Clone, Copy)]
 enum ReduceResponse {
-    Eliminate((u32, u32)),
+    Explode((u32, u32)),
     MoveValue { value: u32, dir: Direction },
     Done,
 }
@@ -65,7 +70,7 @@ impl NumberPair {
                 Number::Pair(p) => {
                     if let Some(res) = p.reduce(depth + 1) {
                         return match res {
-                            ReduceResponse::Eliminate((l, r)) => {
+                            ReduceResponse::Explode((l, r)) => {
                                 self.0[i] = Number::Regular(0);
                                 self.0[opp_i].add_value([l, r][opp_i], direction);
                                 Some(ReduceResponse::MoveValue {
@@ -90,7 +95,7 @@ impl NumberPair {
         }
         if let [Some(left), Some(right)] = res {
             if depth >= 4 {
-                return Some(ReduceResponse::Eliminate((left, right)));
+                return Some(ReduceResponse::Explode((left, right)));
             }
         }
         None
@@ -120,7 +125,7 @@ impl Number {
 
     fn reduce(&mut self) {
         while self.reduce_once().is_some() {
-            //     println!("{:?}", self);
+            //        println!("{:?}", self);
         }
     }
 
@@ -315,12 +320,99 @@ mod tests {
     }
 
     #[test]
-    fn test_sum_large() {
+    fn test_sum_large_1() {
         let (a, _) = Number::parse("[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]").unwrap();
         let (b, _) = Number::parse("[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]").unwrap();
         assert_eq!(
             format!("{:?}", a + b),
             "[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_2() {
+        let (a, _) =
+            Number::parse("[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]").unwrap();
+        let (b, _) = Number::parse("[[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_3() {
+        let (a, _) =
+            Number::parse("[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]").unwrap();
+        let (b, _) =
+            Number::parse("[[[[2,4],7],[6,[0,5]]],[[[6,8],[2,8]],[[2,1],[4,5]]]]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[7,0],[7,7]],[[7,7],[7,8]]],[[[7,7],[8,8]],[[7,7],[8,7]]]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_4() {
+        let (a, _) =
+            Number::parse("[[[[7,0],[7,7]],[[7,7],[7,8]]],[[[7,7],[8,8]],[[7,7],[8,7]]]]").unwrap();
+        let (b, _) = Number::parse("[7,[5,[[3,8],[1,4]]]]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[7,7],[7,8]],[[9,5],[8,7]]],[[[6,8],[0,8]],[[9,9],[9,0]]]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_5() {
+        let (a, _) =
+            Number::parse("[[[[7,7],[7,8]],[[9,5],[8,7]]],[[[6,8],[0,8]],[[9,9],[9,0]]]]").unwrap();
+        let (b, _) = Number::parse("[[2,[2,2]],[8,[8,1]]]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[6,6],[6,6]],[[6,0],[6,7]]],[[[7,7],[8,9]],[8,[8,1]]]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_6() {
+        let (a, _) =
+            Number::parse("[[[[6,6],[6,6]],[[6,0],[6,7]]],[[[7,7],[8,9]],[8,[8,1]]]]").unwrap();
+        let (b, _) = Number::parse("[2,9]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[6,6],[7,7]],[[0,7],[7,7]]],[[[5,5],[5,6]],9]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_7() {
+        let (a, _) = Number::parse("[[[[6,6],[7,7]],[[0,7],[7,7]]],[[[5,5],[5,6]],9]]").unwrap();
+        let (b, _) = Number::parse("[1,[[[9,3],9],[[9,0],[0,7]]]]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[7,8],[6,7]],[[6,8],[0,8]]],[[[7,7],[5,0]],[[5,5],[5,6]]]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_8() {
+        let (a, _) =
+            Number::parse("[[[[7,8],[6,7]],[[6,8],[0,8]]],[[[7,7],[5,0]],[[5,5],[5,6]]]]").unwrap();
+        let (b, _) = Number::parse("[[[5,[7,4]],7],1]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[7,7],[7,7]],[[8,7],[8,7]]],[[[7,0],[7,7]],9]]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_sum_large_9() {
+        let (a, _) = Number::parse("[[[[7,7],[7,7]],[[8,7],[8,7]]],[[[7,0],[7,7]],9]]").unwrap();
+        let (b, _) = Number::parse("[[[[4,2],2],6],[8,7]]").unwrap();
+        assert_eq!(
+            format!("{:?}", a + b),
+            "[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]".to_string()
         );
     }
 }
