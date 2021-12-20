@@ -26,3 +26,4 @@ My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
 | 17 | [Trick Shot](day_17/src/main.rs) | 2 / 2 |
 | 18 | [Snailfish](day_18/src/main.rs) | 2 / 2 |
 | 19 | [Beacon Scanner](day_19/src/main.rs) | 2 / 2 |
+| 20 | [Trench Map](day_20/src/main.rs) | 0 / 2 |
