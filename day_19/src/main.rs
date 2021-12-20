@@ -62,21 +62,21 @@ impl Display for ScannerData {
 impl ScannerData {
     fn rotate_x(mut coord: IVec3, times: usize) -> IVec3 {
         for _ in 0..times {
-            coord = IVec3::new(coord.x, -coord.z, coord.y)
+            coord = IVec3::new(coord.x, -coord.z, coord.y);
         }
         coord
     }
 
     fn rotate_y(mut coord: IVec3, times: usize) -> IVec3 {
         for _ in 0..times {
-            coord = IVec3::new(-coord.z, coord.y, coord.x)
+            coord = IVec3::new(-coord.z, coord.y, coord.x);
         }
         coord
     }
 
     fn rotate_z(mut coord: IVec3, times: usize) -> IVec3 {
         for _ in 0..times {
-            coord = IVec3::new(coord.y, -coord.x, coord.z)
+            coord = IVec3::new(coord.y, -coord.x, coord.z);
         }
         coord
     }
@@ -120,7 +120,7 @@ impl ScannerData {
     }
 
     fn translate(&mut self, delta: IVec3) {
-        for coord in self.beacons.iter_mut() {
+        for coord in &mut self.beacons {
             *coord += delta;
         }
     }
@@ -153,7 +153,7 @@ fn main() {
         for (i, scanner) in scanners.iter().enumerate() {
             if let Some(mut matched) = handled.iter().find_map(|other| scanner.find_match(other)) {
                 matched.rotated.translate(matched.delta);
-                position_set.extend(matched.rotated.beacons.iter().cloned());
+                position_set.extend(matched.rotated.beacons.iter().copied());
                 scanners.remove(i);
                 handled.push(matched.rotated);
                 positions.push(matched.delta);
@@ -164,7 +164,7 @@ fn main() {
     println!("Part1: Beacon count = {}", position_set.len());
     let max_distance = positions
         .iter()
-        .flat_map(|p1| {
+        .filter_map(|p1| {
             positions
                 .iter()
                 .map(|p2| {
