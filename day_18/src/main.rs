@@ -199,17 +199,22 @@ fn main() {
         .lines()
         .map(|l| Number::parse(l).unwrap().0)
         .collect();
-    let sum = numbers
+    let sum = numbers.iter().cloned().reduce(|acc, v| acc + v).unwrap();
+    println!("Part1. Sum = {}", sum.magnitude());
+    let max_sum = numbers
         .iter()
         .cloned()
-        .reduce(|acc, v| {
-            println!("{:?}\n+ {:?}", acc, v);
-            let res = acc + v;
-            println!("= {:?}\n", res);
-            res
+        .map(|n1| {
+            numbers
+                .iter()
+                .cloned()
+                .map(|n2| (n1.clone() + n2).magnitude())
+                .max()
+                .unwrap()
         })
+        .max()
         .unwrap();
-    println!("Sum = {}", sum.magnitude());
+    println!("Part2. Max Sum = {}", max_sum);
 }
 
 #[cfg(test)]
