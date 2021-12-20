@@ -6,7 +6,7 @@
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Not};
 
-const FILE_PATH: &str = "test2.txt";
+const FILE_PATH: &str = "input.txt";
 
 macro_rules! substr {
     ($str:expr, $range:expr) => {
@@ -49,26 +49,16 @@ enum Number {
 }
 
 impl NumberPair {
-    fn reduce(&mut self, depth: usize) -> Option<ReduceResponse> {
+    fn reduce_explode(&mut self, depth: usize) -> Option<ReduceResponse> {
         let mut res = [None, None];
         for direction in [Direction::Left, Direction::Right] {
             let opposite_dir = !direction;
             let i = direction as usize;
             let opp_i = opposite_dir as usize;
             res[i] = match &mut self.0[i] {
-                Number::Regular(v) => {
-                    if *v >= 10 {
-                        let div = *v as f32 / 2.0;
-                        self.0[i] = Number::Pair(Box::new(Self([
-                            Number::Regular(div.floor() as u32),
-                            Number::Regular(div.ceil() as u32),
-                        ])));
-                        return Some(ReduceResponse::Done);
-                    }
-                    Some(*v)
-                }
+                Number::Regular(v) => Some(*v),
                 Number::Pair(p) => {
-                    if let Some(res) = p.reduce(depth + 1) {
+                    if let Some(res) = p.reduce_explode(depth + 1) {
                         return match res {
                             ReduceResponse::Explode((l, r)) => {
                                 self.0[i] = Number::Regular(0);
@@ -100,6 +90,29 @@ impl NumberPair {
         }
         None
     }
+
+    fn reduce_split(&mut self) -> Option<ReduceResponse> {
+        for direction in [Direction::Left, Direction::Right] {
+            let i = direction as usize;
+            match &mut self.0[i] {
+                Number::Regular(v) if *v >= 10 => {
+                    let div = *v as f32 / 2.0;
+                    self.0[i] = Number::Pair(Box::new(Self([
+                        Number::Regular(div.floor() as u32),
+                        Number::Regular(div.ceil() as u32),
+                    ])));
+                    return Some(ReduceResponse::Done);
+                }
+                Number::Pair(p) => {
+                    if p.reduce_split().is_some() {
+                        return Some(ReduceResponse::Done);
+                    }
+                }
+                Number::Regular(_) => (),
+            }
+        }
+        None
+    }
 }
 
 impl Number {
@@ -124,14 +137,16 @@ impl Number {
     }
 
     fn reduce(&mut self) {
-        while self.reduce_once().is_some() {
-            //        println!("{:?}", self);
-        }
+        while self.reduce_once().is_some() {}
     }
 
     fn reduce_once(&mut self) -> Option<ReduceResponse> {
         if let Self::Pair(p) = self {
-            p.reduce(0)
+            let res = p.reduce_explode(0);
+            if res.is_none() {
+                return p.reduce_split();
+            }
+            res
         } else {
             None
         }
@@ -262,10 +277,34 @@ mod tests {
     fn test_small_sum() {
         let (a, _) = Number::parse("[[[[4,3],4],4],[7,[[8,4],9]]]").unwrap();
         let (b, _) = Number::parse("[1,1]").unwrap();
+        let mut res = Number::Pair(Box::new(NumberPair([a.clone(), b.clone()])));
+        assert_eq!(format!("{:?}", res), format!("[{:?},{:?}]", a, b));
+        res.reduce_once();
         assert_eq!(
-            format!("{:?}", a + b),
+            format!("{:?}", res),
+            "[[[[0,7],4],[7,[[8,4],9]]],[1,1]]".to_string()
+        );
+        res.reduce_once();
+        assert_eq!(
+            format!("{:?}", res),
+            "[[[[0,7],4],[15,[0,13]]],[1,1]]".to_string()
+        );
+        res.reduce_once();
+        assert_eq!(
+            format!("{:?}", res),
+            "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]".to_string()
+        );
+        res.reduce_once();
+        assert_eq!(
+            format!("{:?}", res),
+            "[[[[0,7],4],[[7,8],[0,[6,7]]]],[1,1]]".to_string()
+        );
+        res.reduce_once();
+        assert_eq!(
+            format!("{:?}", res),
             "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]".to_string()
         );
+        assert!(res.reduce_once().is_none());
     }
 
     #[test]
@@ -410,9 +449,11 @@ mod tests {
     fn test_sum_large_9() {
         let (a, _) = Number::parse("[[[[7,7],[7,7]],[[8,7],[8,7]]],[[[7,0],[7,7]],9]]").unwrap();
         let (b, _) = Number::parse("[[[[4,2],2],6],[8,7]]").unwrap();
+        let res = a + b;
         assert_eq!(
-            format!("{:?}", a + b),
+            format!("{:?}", res),
             "[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]".to_string()
         );
+        assert_eq!(res.magnitude(), 3488);
     }
 }
