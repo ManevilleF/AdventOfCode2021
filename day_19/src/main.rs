@@ -1,9 +1,9 @@
 use glam::IVec3;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-const FILE_PATH: &str = "test.txt";
+const FILE_PATH: &str = "input.txt";
 
 #[derive(Debug, Clone)]
 struct ScannerData {
@@ -13,9 +13,8 @@ struct ScannerData {
 
 #[derive(Debug, Clone)]
 struct ScannerMatch {
-    match_id: usize,
     delta: IVec3,
-    new_scanner: ScannerData,
+    rotated: ScannerData,
 }
 
 impl FromStr for ScannerData {
@@ -127,14 +126,11 @@ impl ScannerData {
     }
 
     fn find_match(&self, other: &Self) -> Option<ScannerMatch> {
-        for (i, mut candidate) in self.rotated_candidates().into_iter().enumerate() {
+        for candidate in self.rotated_candidates() {
             if let Some(delta) = candidate.find_delta(other) {
-                println!("Found match with {} rotation", i);
-                candidate.translate(delta);
                 return Some(ScannerMatch {
-                    match_id: other.id,
                     delta,
-                    new_scanner: candidate,
+                    rotated: candidate,
                 });
             }
         }
@@ -148,20 +144,36 @@ fn main() {
         .split("\n\n")
         .map(|s| ScannerData::from_str(s).unwrap())
         .collect();
-    let mut map = HashMap::new();
-    for scanner in &scanners {
-        for other in &scanners {
-            if scanner.id == other.id {
-                continue;
-            }
-            if let Some(matched) = scanner.find_match(other) {
-                println!(
-                    "-- Matched {} with {}: {:?}",
-                    scanner.id, matched.match_id, matched.delta
-                );
-                map.insert(scanner.id, matched);
+    let expected_len = scanners.len();
+    let base_scanner = scanners.remove(0);
+    let mut position_set: HashSet<IVec3> = base_scanner.beacons.iter().copied().collect();
+    let mut handled = vec![base_scanner];
+    let mut positions = vec![IVec3::ZERO];
+    while handled.len() < expected_len {
+        for (i, scanner) in scanners.iter().enumerate() {
+            if let Some(mut matched) = handled.iter().find_map(|other| scanner.find_match(other)) {
+                matched.rotated.translate(matched.delta);
+                position_set.extend(matched.rotated.beacons.iter().cloned());
+                scanners.remove(i);
+                handled.push(matched.rotated);
+                positions.push(matched.delta);
+                break;
             }
         }
     }
-    println!("{}", map.len());
+    println!("Part1: Beacon count = {}", position_set.len());
+    let max_distance = positions
+        .iter()
+        .flat_map(|p1| {
+            positions
+                .iter()
+                .map(|p2| {
+                    let dist = *p1 - *p2;
+                    dist.x.abs() + dist.y.abs() + dist.z.abs()
+                })
+                .max()
+        })
+        .max()
+        .unwrap();
+    println!("Part2: Max distance = {}", max_distance);
 }
