@@ -42,12 +42,12 @@ impl FromStr for Image {
 impl Display for Image {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let [x_min, y_min] = [
-            self.x_min().ok_or(fmt::Error)? - 4,
-            self.y_min().ok_or(fmt::Error)? - 4,
+            self.x_min().ok_or(fmt::Error)? - 2,
+            self.y_min().ok_or(fmt::Error)? - 2,
         ];
         let [x_max, y_max] = [
-            self.x_max().ok_or(fmt::Error)? + 4,
-            self.y_max().ok_or(fmt::Error)? + 4,
+            self.x_max().ok_or(fmt::Error)? + 2,
+            self.y_max().ok_or(fmt::Error)? + 2,
         ];
         let buff: Vec<String> = (y_min..=y_max)
             .map(|y| {
@@ -80,19 +80,25 @@ impl Image {
         self.0.iter().max_by_key(|[_, y]| *y).map(|[_, y]| *y)
     }
 
-    fn pixel_data(&self, [x, y]: Pixel) -> u16 {
+    fn pixel_data(&self, [x, y]: Pixel, algorithm: &[bool; 512]) -> bool {
+        let mut got_some = false;
         let bits: String = NEIGHBOR_COORDS
             .iter()
             .map(|[dx, dy]| {
                 let coord = [x + dx, y + dy];
                 if self.0.get(&coord).is_some() {
+                    got_some = true;
                     '1'
                 } else {
                     '0'
                 }
             })
             .collect();
-        u16::from_str_radix(&bits, 2).unwrap()
+        if !got_some {
+            return false;
+        }
+        let data = u16::from_str_radix(&bits, 2).unwrap();
+        algorithm.get(data as usize).copied().unwrap_or(false)
     }
 
     fn compute_image(&self, algorithm: &[bool; 512]) -> Self {
@@ -103,8 +109,7 @@ impl Image {
                 (x_min..=x_max)
                     .filter_map(|x| {
                         let coord = [x, y];
-                        let data = self.pixel_data(coord);
-                        algorithm[data as usize].then(|| coord)
+                        self.pixel_data(coord, algorithm).then(|| coord)
                     })
                     .collect::<HashSet<Pixel>>()
             })
@@ -114,7 +119,7 @@ impl Image {
 }
 
 fn main() {
-    let (algo, input) = std::fs::read_to_string(FILE_PATH)
+    let (algo, mut image) = std::fs::read_to_string(FILE_PATH)
         .unwrap()
         .split_once("\n\n")
         .map(|(algo, input)| {
@@ -128,10 +133,13 @@ fn main() {
             (algo, input)
         })
         .unwrap();
-    println!("{}", input);
-    let new_image = input.compute_image(&algo);
-    println!("{}", new_image);
-    let new_image = new_image.compute_image(&algo);
-    println!("{}", new_image);
-    println!("Part 1: {} lit pixels", new_image.0.len());
+    for i in 0..50 {
+        image = image.compute_image(&algo);
+        if i == 1 {
+            println!("{}", image);
+            println!("Part 1: {} lit pixels", image.0.len());
+        }
+    }
+    println!("{}", image);
+    println!("Part 1: {} lit pixels", image.0.len());
 }
