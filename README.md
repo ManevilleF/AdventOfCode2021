@@ -30,4 +30,4 @@ I attempted to produce clean code using best practices, a very restrictive clipp
 | 19 | [Beacon Scanner](day_19/src/main.rs) | 2 / 2 |
 | 20 | [Trench Map](day_20/src/main.rs) | 2 / 2 |
 | 21 | [Dirac Dice](day_21/src/main.rs) | 2 / 2 |
-| 22 | [Reactor Reboot](day_22/src/main.rs) | 0 / 2 |
+| 22 | [Reactor Reboot](day_22/src/main.rs) | 1 / 2 |
