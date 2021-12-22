@@ -3,7 +3,9 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![workflow](https://github.com/ManevilleF/AdventOfCode2021/actions/workflows/rust.yaml/badge.svg)](https://github.com/ManevilleF/AdventOfCode2021/actions/workflows/rust.yaml)
 
-My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
+My answers for the 2021 [Advent of code](https://adventofcode.com/2021).
+
+I attempted to produce clean code using best practices, a very restrictive clippy and functional patterns.
 
 | Day | Name | Done |
 |-----|------|------|
@@ -28,3 +30,4 @@ My answers for the 2021 [Advent of code](https://adventofcode.com/2021)
 | 19 | [Beacon Scanner](day_19/src/main.rs) | 2 / 2 |
 | 20 | [Trench Map](day_20/src/main.rs) | 2 / 2 |
 | 21 | [Dirac Dice](day_21/src/main.rs) | 2 / 2 |
+| 22 | [Reactor Reboot](day_22/src/main.rs) | 0 / 2 |
